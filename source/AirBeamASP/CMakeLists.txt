@@ -1,6 +1,9 @@
-set(ABSL_PROPAGATE_CXX_STD ON)
-
 set(DRIVER_NAME "AirBeamASP")
+set(DRIVER_VERSION "1.0.0")
+set(DRIVER_COPYRIGHT "Copyright (c) chenks12138 authors")
+set(DRIVER_IDENTIFIER "airbeam.cattchen.top")
+set(DRIVER_UID "6BEC3E7D-8A3A-4E6D-8B9F-1F5B8A6C7D4A")
+set(DRIVER_ENTRYPOINT "AirBeamASPEntryPoint")
 
 
 if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
@@ -15,36 +18,22 @@ if(SIMD_ARM)
   add_definitions(-DSIMD_ARM)
 endif()
 
+# Add definition for Release build
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  add_definitions(-DBUILD_DEBUG)
+  message("Adding BUILD_DEBUG definition")
+endif()
+
 file(
   GLOB_RECURSE
   STANDALONE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/*
 )
 
-# -----------------------------------------------------------------------------
-# Resources
-# -----------------------------------------------------------------------------
-
-# Create a directory for resources
-set(RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Resources")
-file(MAKE_DIRECTORY "${RESOURCE_DIR}")
-
-# List resource files (e.g., icons, localization files)
-set(RESOURCE_FILES
-    "${RESOURCE_DIR}/SidebarOpticalDisk.icns" # Example: Replace with your actual icon file
-    # Add other resource files here
-)
-
-# Copy resources to the bundle
-install(FILES ${RESOURCE_FILES}
-    DESTINATION "Contents/Resources"
-)
-
 add_library(
   ${DRIVER_NAME}
   MODULE
   ${STANDALONE_FILES}
-  ${RESOURCE_FILES} # Add resource files to the library
 )
 
 find_library(COREAUDIO_LIBRARY CoreAudio REQUIRED)
@@ -78,5 +67,4 @@ set_target_properties(${DRIVER_NAME} PROPERTIES
   MACOSX_BUNDLE_COPYRIGHT "${DRIVER_COPYRIGHT}"
   MACOSX_BUNDLE_GUI_IDENTIFIER "${DRIVER_IDENTIFIER}"
   MACOSX_BUNDLE_SHORT_VERSION_STRING "${DRIVER_VERSION}"
-  MACOSX_BUNDLE_ICON_FILE "${RESOURCE_DIR}/SidebarOpticalDisk.icns" # Set the bundle icon
 )

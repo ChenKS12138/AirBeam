@@ -1,3 +1,5 @@
+// Copyright (c) 2025 ChenKS12138
+
 #include "codec.h"
 
 #ifdef SIMD_ARM
@@ -14,9 +16,7 @@ void PCMCodec::Encode(const RtpAudioPacketChunk& input,
 
   for (; offset + 16 <= len; offset += 16) {
     uint8x16_t v = vld1q_u8(in + offset);
-
     uint8x16_t r = vrev32q_u8(v);
-
     vst1q_u8(out + offset, r);
   }
 

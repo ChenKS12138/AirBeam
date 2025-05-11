@@ -1,6 +1,6 @@
 {
   "files.associations": {
-    "*.h": "objective-c"
+    "*.h": "cpp"
   },
   "editor.formatOnSave": true
 }

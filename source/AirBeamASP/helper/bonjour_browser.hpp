@@ -1,3 +1,5 @@
+// Copyright (c) 2025 ChenKS12138
+
 #pragma once
 
 #include <arpa/inet.h>
@@ -11,7 +13,25 @@
 #include <string>
 #include <thread>
 
+#include "logger.hpp"
+
 class BonjourBrowser {
+ public:
+  enum class EventType {
+    kServiceOnline = 1,
+    kServiceOffline = 2,
+  };
+  struct ServiceInfo {
+    std::string name;
+    std::string fullname;
+    std::string ip;
+    uint16_t port;
+    bool operator==(const ServiceInfo& other) const {
+      return name == other.name && fullname == other.fullname &&
+             ip == other.ip && port == other.port;
+    }
+  };
+
  protected:
   struct ContextForAddr {
     BonjourBrowser* browser;
@@ -22,8 +42,7 @@ class BonjourBrowser {
 
  public:
   using ServiceFoundCallback =
-      std::function<void(const std::string& name, const std::string& fullname,
-                         const std::string& ip, uint16_t port)>;
+      std::function<void(EventType, const ServiceInfo&)>;
 
   BonjourBrowser() : browseRef_(nullptr), running_(false) {}
 
@@ -32,9 +51,9 @@ class BonjourBrowser {
   bool startBrowse(const std::string& serviceType,
                    ServiceFoundCallback callback) {
     if (running_) return false;
-
     callback_ = callback;
 
+    ABDebugLog("DNSServiceBrowse");
     DNSServiceErrorType err =
         DNSServiceBrowse(&browseRef_, 0, 0, serviceType.c_str(), nullptr,
                          &BonjourBrowser::BrowseCallback, this);
@@ -71,8 +90,12 @@ class BonjourBrowser {
   ServiceFoundCallback callback_;
 
   void browseLoop() {
+    ABDebugLog("start browse loop");
     int fd = DNSServiceRefSockFD(browseRef_);
-    if (fd == -1) return;
+    if (fd == -1) {
+      ABDebugLog("DNSServiceRefSockFD failed");
+      return;
+    }
 
     while (running_) {
       fd_set readfds;
@@ -94,6 +117,7 @@ class BonjourBrowser {
       DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex,
       DNSServiceErrorType errorCode, const char* serviceName,
       const char* regtype, const char* replyDomain, void* context) {
+    ABDebugLog("browse callback %d", errorCode);
     if (errorCode != kDNSServiceErr_NoError) return;
 
     BonjourBrowser* self = static_cast<BonjourBrowser*>(context);
@@ -121,6 +145,16 @@ class BonjourBrowser {
         }
         DNSServiceRefDeallocate(resolveRef);
       }
+    } else {
+      BonjourBrowser* self = static_cast<BonjourBrowser*>(context);
+      if (self && self->callback_) {
+        ServiceInfo service_info;
+        service_info.name = extractShortName(serviceName);
+        service_info.fullname = serviceName;
+        service_info.ip = "";
+        service_info.port = 0;
+        self->callback_(EventType::kServiceOffline, service_info);
+      }
     }
   }
 
@@ -136,7 +170,6 @@ class BonjourBrowser {
 
     port = ntohs(port);
 
-    // 记录 fullname
     ContextForAddr* ctx = new ContextForAddr{self, "", fullname, port};
 
     DNSServiceRef addrRef;
@@ -183,15 +216,18 @@ class BonjourBrowser {
     }
 
     if (self && self->callback_) {
-      std::string shortName = extractShortName(ctx->fullName);
-      self->callback_(shortName, ctx->fullName, ipStr, ctx->port);
+      ServiceInfo service_info;
+      service_info.name = extractShortName(ctx->fullName);
+      service_info.fullname = ctx->fullName;
+      service_info.ip = ipStr;
+      service_info.port = ctx->port;
+      self->callback_(EventType::kServiceOnline, service_info);
     }
 
     delete ctx;
   }
 
   static std::string extractShortName(const std::string& fullname) {
-    // 从 fullname 提取出服务名（去掉 ._raop._tcp.local.）
     size_t pos = fullname.find("._");
     if (pos != std::string::npos) {
       return fullname.substr(0, pos);

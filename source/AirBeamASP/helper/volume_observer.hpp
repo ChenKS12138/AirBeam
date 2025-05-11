@@ -1,16 +1,16 @@
+// Copyright (c) 2025 ChenKS12138
+
 #pragma once
 
 #include <CoreAudio/CoreAudio.h>
 #include <MacTypes.h>
 
 #include <functional>
-#include <iostream>
 
 class VolumeObserver {
  public:
   using Callback = std::function<void(Float32)>;
 
-  // 构造函数
   explicit VolumeObserver(AudioObjectID output_device_id, Callback callback)
       : output_device_id_(output_device_id), callback_(std::move(callback)) {
     StartObserve();
@@ -39,9 +39,7 @@ class VolumeObserver {
     }
     UInt32 dataSize = sizeof(volume);
     static const AudioObjectPropertyAddress volume_address = {
-        kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyScopeOutput,
-        0  // Channel 1
-    };
+        kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyScopeOutput, 0};
     status = AudioObjectGetPropertyData(output_device_id, &volume_address, 0,
                                         nullptr, &dataSize, &volume);
     if (status != noErr) {
@@ -53,7 +51,6 @@ class VolumeObserver {
 
   static OSStatus FindAudioDeviceByUID(const std::string& uid,
                                        AudioDeviceID& device_id) {
-    // Get the number of audio devices
     UInt32 propertySize = 0;
     AudioObjectPropertyAddress propertyAddress = {
         kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
@@ -66,10 +63,8 @@ class VolumeObserver {
       return status;
     }
 
-    // Calculate device count
     UInt32 deviceCount = propertySize / sizeof(AudioDeviceID);
 
-    // Get the array of device IDs
     std::vector<AudioDeviceID> deviceIDs(deviceCount);
     status =
         AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress,
@@ -79,7 +74,6 @@ class VolumeObserver {
       return status;
     }
 
-    // Iterate through devices to find matching UID
     for (UInt32 i = 0; i < deviceCount; i++) {
       CFStringRef deviceUID = NULL;
       propertySize = sizeof(deviceUID);
@@ -140,15 +134,11 @@ class VolumeObserver {
   void StartObserve() {
     OSStatus status = noErr;
 
-    volume_address_ = {
-        kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyScopeOutput,
-        0  // Channel 1
-    };
+    volume_address_ = {kAudioDevicePropertyVolumeScalar,
+                       kAudioDevicePropertyScopeOutput, 0};
     status = AudioObjectAddPropertyListener(
         output_device_id_, &volume_address_,
-        VolumeObserver::PropertyListenerCallback,
-        static_cast<void*>(this)  // Client data (optional)
-    );
+        VolumeObserver::PropertyListenerCallback, static_cast<void*>(this));
 
     if (status != noErr) {
       err_msg_ = "Failed to add property listener";
@@ -159,15 +149,12 @@ class VolumeObserver {
   }
 
   void StopObserve() {
-    // Remove the listener when done
     OSStatus status = AudioObjectRemovePropertyListener(
         output_device_id_, &volume_address_,
         VolumeObserver::PropertyListenerCallback, nullptr);
   }
 
   VolumeObserver& operator=(const VolumeObserver&) = delete;
-
-  // 回调函数处理音量变化
 
  private:
   AudioObjectID output_device_id_;

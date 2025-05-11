@@ -1,3 +1,5 @@
+// Copyright (c) 2025 ChenKS12138
+
 #include "rtsp.h"
 
 #include <sstream>

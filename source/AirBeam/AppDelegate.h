@@ -1,12 +1,9 @@
+// Copyright (c) 2025 ChenKS12138
+
 #pragma once
 
 #import <Cocoa/Cocoa.h>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
-
-@property(strong) NSWindow *window;
-
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification;
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender;
-
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSToolbarDelegate>
+@property(strong) NSWindow *mainWindow;
 @end

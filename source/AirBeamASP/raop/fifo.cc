@@ -1,3 +1,5 @@
+// Copyright (c) 2025 ChenKS12138
+
 #include "fifo.h"
 
 size_t ConcurrentByteFIFO::Write(const uint8_t* data, size_t length) {

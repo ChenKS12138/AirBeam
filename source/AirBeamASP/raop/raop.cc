@@ -1,3 +1,5 @@
+// Copyright (c) 2025 ChenKS12138
+
 #include "raop.h"
 
 #include <arpa/inet.h>
