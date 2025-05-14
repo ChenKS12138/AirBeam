@@ -33,7 +33,9 @@ jobs:
           TAG_NAME="${GITHUB_REF#refs/tags/}"
           echo "Creating release for tag: $TAG_NAME"
 
-          zip -r AirBeam.app.zip -x "*.DS_Store" -x "__MACOSX/*" -j build/source/AirBeam/AirBeam.app
+          cd build/source/AirBeam
+          zip -r ../../../AirBeam.app.zip AirBeam.app
+          cd ../../../
           gh release create "$TAG_NAME"  AirBeam.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
