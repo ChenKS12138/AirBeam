@@ -1,0 +1,24 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure with CMake
+        run: cmake -S . -B build -G Ninja
+
+      - name: Build AirBeam target
+        run: cmake --build build --target AirBeam
