@@ -12,7 +12,7 @@
 
 There are several ways:
 
-* ⬇️ Download the latest release on Github
+* ⬇️ Download [the latest release on Github](https://github.com/ChenKS12138/AirBeam/releases)
 * 🚀 Clone it and build it yourself
 
 ## Usage
