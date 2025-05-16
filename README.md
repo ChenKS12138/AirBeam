@@ -8,6 +8,16 @@
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/chenks12138)
 
+## Compare With NativeSpeaker & Airplay
+
+**PLEASE TURN OFF MUTE**
+
+| Native Speaker  | Airplay | AirBeam |
+| ------------- | ------------- | ------------- |
+| <video src="https://github.com/user-attachments/assets/2b89ad33-e055-4cbe-95da-fc29a9156109.mp4">  | <video src="https://github.com/user-attachments/assets/40815cc9-0c97-4dd4-8b64-6e78be526605.mp4">| <video src="https://github.com/user-attachments/assets/defb753d-1c00-47cb-9ab6-cec83c31e919.mp4">|
+
+
+
 ## Installation
 
 There are several ways:
