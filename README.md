@@ -9,7 +9,7 @@
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/chenks12138)
 
-## Compare With NativeSpeaker & Airplay
+## 🧪 Compare with Native Speaker & AirPlay
 
 🖥️ Test Environment
 
@@ -20,28 +20,30 @@
   * **OS**: 18.5
   * **Network**: Connected via 5GHz Wi-Fi
 
-**PLEASE TURN OFF MUTE!!!**
+> **⚠️ PLEASE TURN OFF MUTE BEFORE PLAYING THE VIDEOS!**
 
 | Native Speaker  | Airplay | AirBeam |
 | ------------- | ------------- | ------------- |
 | <video src="https://github.com/user-attachments/assets/2b89ad33-e055-4cbe-95da-fc29a9156109.mp4">  | <video src="https://github.com/user-attachments/assets/40815cc9-0c97-4dd4-8b64-6e78be526605.mp4">| <video src="https://github.com/user-attachments/assets/defb753d-1c00-47cb-9ab6-cec83c31e919.mp4">|
 
 
-## Installation
+##  📦 Installation
 
 There are several ways:
 
 * ⬇️ Download [the latest release on Github](https://github.com/ChenKS12138/AirBeam/releases)
 * 🚀 Clone it and build it yourself
 
-## Usage
+## ⚙️ Usage
 
-Just Click "Install", and choose device in your audio control panel. 
+1. Launch the app  
+2. Click **Install**  
+3. Select your output device in the macOS audio control panel  
 
 <img width="748" alt="image" src="https://github.com/user-attachments/assets/24f7904b-7238-4815-89bb-3fc4519b4269" />
 
 
-## Build from resource
+## 🛠️ Build from Source
 
 ```shell
 git clone git@github.com:ChenKS12138/AirBeam.git
@@ -51,3 +53,17 @@ cmake -S . -B build
 cmake --build build --target AirBeam
 open build/source/AirBeam/AirBeam.app
 ```
+
+
+## 🙏 Credits
+
+Parts of this project were inspired by or adapted from the following open source projects:
+
+- [gavv/libASPL](https://github.com/gavv/libASPL) – for creating macOS Audio Server plugins.
+- [LinusU/rust-roap-player](https://github.com/LinusU/rust-raop-player) – reference for AirPlay integration.
+
+Huge thanks to their authors and contributors! 💖
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to open an issue or submit a PR.
