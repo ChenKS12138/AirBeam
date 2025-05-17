@@ -11,7 +11,16 @@
 
 ## Compare With NativeSpeaker & Airplay
 
-**PLEASE TURN OFF MUTE**
+🖥️ Test Environment
+
+* **Laptop**: MacBook Pro 14-inch (2021)
+  * **OS**: macOS Sequoia 15.4
+  * **Network**: Wired Ethernet connection
+* **Speaker**: HomePod mini (2020)
+  * **OS**: 18.5
+  * **Network**: Connected via 5GHz Wi-Fi
+
+**PLEASE TURN OFF MUTE!!!**
 
 | Native Speaker  | Airplay | AirBeam |
 | ------------- | ------------- | ------------- |
