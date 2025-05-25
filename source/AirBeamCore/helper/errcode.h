@@ -23,6 +23,7 @@ enum ErrCode : uint64_t {
   kErrUdpAddrParse = 131075,
   kErrUdpSend = 131076,
   kErrUdpRecv = 131077,
+  kErrGetsockName = 131078,
 };
 }  // namespace helper
 }  // namespace AirBeamCore

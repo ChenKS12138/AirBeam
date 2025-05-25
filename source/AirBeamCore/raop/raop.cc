@@ -17,6 +17,7 @@
 #include "constants.h"
 #include "fmt/core.h"
 #include "helper/errcode.h"
+#include "helper/logger.h"
 #include "helper/network.h"
 #include "helper/random.h"
 #include "rtp.h"
@@ -31,6 +32,7 @@ using namespace helper;
 void Raop::Start() {
   int ret = rtsp_client_.Connect(rtsp_ip_addr_, rtsp_port_);
   if (ret != kOk) {
+    ABDebugLog("rtsp_client_.Connect failed, ret=%d", ret);
     return;
   }
 
@@ -83,6 +85,7 @@ void Raop::SendChunk(const RtpAudioPacketChunk& chunk) {
          buffer.data(), buffer.size());
   int ret = audio_server_.Write(remote_audio_addr_, data);
   if (ret != kOk) {
+    ABDebugLog("audio_server_.Write failed, ret=%d", ret);
     exit(-1);
     return;
   }
@@ -110,6 +113,7 @@ void Raop::SetVolume(uint8_t volume_percent) {
   RtspRespMessage response;
   int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
+    ABDebugLog("rtsp_client_.DoRequest failed, ret=%d", ret);
     exit(-1);
     return;
   }
@@ -150,36 +154,26 @@ void Raop::Announce() {
   RtspRespMessage response;
   int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
+    ABDebugLog("rtsp_client_.DoRequest failed, ret=%d", ret);
     exit(-1);
     return;
   }
 }
 
 void Raop::BindCtrlAndTimePort() {
-  ctrl_port_ = 0;
+  int ret = 0;
   time_port_ = 0;
-  ctrl_sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-  if (ctrl_sockfd_ < 0) {
+  ret = ctrl_server_.Bind();
+  if (ret != kOk) {
+    ABDebugLog("ctrl_server_.Bind, ret=%d", ret);
     exit(-1);
+    return;
   }
-  struct sockaddr_in ctrl_addr;
-  ctrl_addr.sin_family = AF_INET;
-  ctrl_addr.sin_addr.s_addr = INADDR_ANY;
-  ctrl_addr.sin_port = 0;
-  if (::bind(ctrl_sockfd_, (struct sockaddr*)&ctrl_addr, sizeof(ctrl_addr)) <
-      0) {
-    close(ctrl_sockfd_);
-    exit(-1);
-  }
-  socklen_t addr_len = sizeof(ctrl_addr);
-  if (getsockname(ctrl_sockfd_, (struct sockaddr*)&ctrl_addr, &addr_len) < 0) {
-    close(ctrl_sockfd_);
-    exit(-1);
-  }
-  ctrl_port_ = ntohs(ctrl_addr.sin_port);
   time_sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
   if (time_sockfd_ < 0) {
+    ABDebugLog("socket(AF_INET, SOCK_DGRAM, 0) failed");
     exit(-1);
+    return;
   }
   struct sockaddr_in time_addr;
   time_addr.sin_family = AF_INET;
@@ -187,11 +181,13 @@ void Raop::BindCtrlAndTimePort() {
   time_addr.sin_port = 0;
   if (::bind(time_sockfd_, (struct sockaddr*)&time_addr, sizeof(time_addr)) <
       0) {
+    ABDebugLog("bind(time_sockfd_, ...) failed");
     close(time_sockfd_);
     exit(-1);
   }
-  addr_len = sizeof(time_addr);
+  socklen_t addr_len = sizeof(time_addr);
   if (getsockname(time_sockfd_, (struct sockaddr*)&time_addr, &addr_len) < 0) {
+    ABDebugLog("getsockname(time_sockfd_, ...) failed");
     close(time_sockfd_);
     exit(-1);
   }
@@ -204,6 +200,7 @@ void Raop::BindCtrlAndTimePort() {
       int bytes_received = recvfrom(time_sockfd_, buffer, sizeof(buffer), 0,
                                     (struct sockaddr*)&clientAddr, &clientLen);
       if (bytes_received < 0) {
+        ABDebugLog("recvfrom(time_sockfd_, ...) failed");
         exit(-1);
         return;
       }
@@ -221,23 +218,30 @@ void Raop::BindCtrlAndTimePort() {
       int send_ret = sendto(time_sockfd_, buffer, 32, 0,
                             (struct sockaddr*)&clientAddr, clientLen);
       if (send_ret < 0) {
+        ABDebugLog("sendto(time_sockfd_, ...) failed");
         exit(-1);
         return;
       }
     }
   }))->detach();
-  int ret = audio_server_.Bind();
+  ret = audio_server_.Bind();
   if (ret != kOk) {
+    ABDebugLog("audio_server_.Bind failed, ret=%d", ret);
     exit(-1);
   }
 }
 
 void Raop::Setup() {
+  int ret = 0;
+
+  ABDebugLog("Raop::Setup ctrl server port =%d",
+             ctrl_server_.GetLocalNetAddr().port_);
+
   std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
   std::vector<std::tuple<std::string, std::string>> transport_params = {
       {"interleaved", "0-1"},
       {"mode", "record"},
-      {"control_port", std::to_string(ctrl_port_)},
+      {"control_port", std::to_string(ctrl_server_.GetLocalNetAddr().port_)},
       {"timing_port", std::to_string(time_port_)},
   };
   std::string transport =
@@ -253,8 +257,9 @@ void Raop::Setup() {
           .AddHeader("Client-Instance", sci_)
           .Build();
   RtspRespMessage response;
-  int ret = rtsp_client_.DoRequest(request, response);
+  ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
+    ABDebugLog("rtsp_client_.DoRequest failed, ret=%d", ret);
     exit(-1);
     return;
   }
@@ -262,19 +267,24 @@ void Raop::Setup() {
   auto transport_map = ParseKVStr(response.GetHeader("Transport"), "=", ";");
   if (!absl::SimpleAtoi(transport_map["server_port"],
                         &remote_audio_addr_.port_)) {
+    ABDebugLog("absl::SimpleAtoi(transport_map[\"server_port\"], ...) failed");
     exit(-1);
     return;
   }
-  if (!absl::SimpleAtoi(transport_map["control_port"], &remote_ctrl_port_)) {
+  if (!absl::SimpleAtoi(transport_map["control_port"],
+                        &remote_ctrl_addr_.port_)) {
+    ABDebugLog("absl::SimpleAtoi(transport_map[\"control_port\"], ...) failed");
     exit(-1);
     return;
   }
   if (!absl::SimpleAtoi(transport_map["timing_port"], &remote_time_port_)) {
+    ABDebugLog("absl::SimpleAtoi(transport_map[\"timing_port\"], ...) failed");
     exit(-1);
     return;
   }
 
   remote_audio_addr_.ip_ = rtsp_client_.GetRemoteNetAddr().ip_;
+  remote_ctrl_addr_.ip_ = rtsp_client_.GetRemoteNetAddr().ip_;
 }
 
 void Raop::Record() {
@@ -302,33 +312,32 @@ void Raop::Record() {
   RtspRespMessage response;
   int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
+    ABDebugLog("rtsp_client_.DoRequest failed, ret=%d", ret);
     exit(-1);
     return;
   }
   response.GetHeader("Audio-Latency");
   if (!absl::SimpleAtoi(response.GetHeader("Audio-Latency"), &latency_)) {
+    ABDebugLog(
+        "absl::SimpleAtoi(response.GetHeader(\"Audio-Latency\"), ...) failed");
     exit(-1);
     return;
   }
 }
 
 void Raop::SyncStart() {
-  ctrl_peer_addr_.sin_port = htons(remote_ctrl_port_);
-  inet_pton(AF_INET, rtsp_ip_addr_.c_str(), &ctrl_peer_addr_.sin_addr);
-  ctrl_peer_addr_.sin_family = AF_INET;
-  ctrl_peer_addr_len_ = sizeof(ctrl_peer_addr_);
   (new std::thread([this]() {
-    struct sockaddr_in clientAddr;
-    socklen_t clientLen = sizeof(clientAddr);
+    NetAddr ctrl_remote_addr;
     while (true) {
-      uint8_t buffer[1024];
-      int bytes_received = recvfrom(ctrl_sockfd_, buffer, sizeof(buffer), 0,
-                                    (struct sockaddr*)&clientAddr, &clientLen);
-      if (bytes_received < 0) {
+      std::string buffer;
+      int ret = ctrl_server_.Read(ctrl_remote_addr, buffer);
+      if (ret != kOk) {
+        ABDebugLog("ctrl_server_.Read failed, ret=%d", ret);
         exit(-1);
         return;
       }
-      auto recv_pkt = RtpLostPacket::Deserialize(buffer, bytes_received);
+      auto recv_pkt = RtpLostPacket::Deserialize(
+          reinterpret_cast<uint8_t*>(buffer.data()), buffer.size());
     }
   }))->detach();
   (new std::thread([this]() {
@@ -337,10 +346,12 @@ void Raop::SyncStart() {
                                       latency_, false);
       uint8_t buffer[sizeof(RtpSyncPacket)];
       rsp.Serialize(buffer);
-      int send_ret =
-          sendto(ctrl_sockfd_, buffer, sizeof(buffer), 0,
-                 (struct sockaddr*)&ctrl_peer_addr_, ctrl_peer_addr_len_);
-      if (send_ret < 0) {
+      std::string data;
+      data.resize(sizeof(RtpSyncPacket), '\0');
+      memcpy(data.data(), buffer, sizeof(RtpSyncPacket));
+      int ret = ctrl_server_.Write(remote_ctrl_addr_, data);
+      if (ret != kOk) {
+        ABDebugLog("ctrl_server_.Write failed, ret=%d", ret);
         exit(-1);
         return;
       }
@@ -365,6 +376,7 @@ void Raop::KeepAlive() {
       RtspRespMessage response;
       int ret = rtsp_client_.DoRequest(request, response);
       if (ret != kOk) {
+        ABDebugLog("rtsp_client_.DoRequest failed, ret=%d", ret);
         exit(-1);
         return;
       }
@@ -380,10 +392,13 @@ void Raop::FirstSendSync() {
       RtpSyncPacket::Build(status_.head_ts, kSampleRate44100, latency_, true);
   uint8_t buffer[sizeof(RtpSyncPacket)];
   pkt.Serialize(buffer);
-  int send_ret =
-      sendto(ctrl_sockfd_, buffer, sizeof(buffer), 0,
-             (struct sockaddr*)&ctrl_peer_addr_, ctrl_peer_addr_len_);
-  if (send_ret < 0) {
+  std::string data;
+  data.resize(sizeof(RtpSyncPacket), '\0');
+  memcpy(data.data(), buffer, sizeof(RtpSyncPacket));
+  int ret = ctrl_server_.Write(remote_ctrl_addr_, data);
+  ABDebugLog("ctrl_server_.Write,len=%lu", data.size());
+  if (ret != kOk) {
+    ABDebugLog("ctrl_server_.Write failed, ret=%d", ret);
     exit(-1);
     return;
   }

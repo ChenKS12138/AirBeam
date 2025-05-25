@@ -89,6 +89,10 @@ ErrCode UDPServer::Bind() {
   if (bind(sockfd_, (sockaddr*)&local_addr, sizeof(local_addr)) < 0)
     return kErrUdpBind;
 
+  socklen_t addr_len = sizeof(local_addr);
+  if (getsockname(sockfd_, (sockaddr*)&local_addr, &addr_len) < 0)
+    return kErrGetsockName;
+
   char ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &local_addr.sin_addr, ip, sizeof(ip));
 

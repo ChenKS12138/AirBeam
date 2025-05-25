@@ -42,17 +42,11 @@ class Raop {
   std::string sid_;
   std::string sci_;
 
-  int ctrl_port_;
   int time_port_;
 
-  int ctrl_sockfd_;  // UDP server
   int time_sockfd_;  // UDP server
 
-  struct sockaddr_in ctrl_peer_addr_;
-  socklen_t ctrl_peer_addr_len_;
-
   int remote_time_port_;
-  int remote_ctrl_port_;
 
   uint64_t latency_ = 0;
 
