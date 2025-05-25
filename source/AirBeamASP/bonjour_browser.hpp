@@ -15,8 +15,6 @@
 
 #include "helper/logger.h"
 
-using namespace AirBeamCore::helper;
-
 class BonjourBrowser {
  public:
   enum class EventType {
