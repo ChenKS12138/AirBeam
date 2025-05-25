@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "helper/network.h"
 #include "helper/random.h"
 #include "raop/rtp.h"
 
@@ -21,10 +22,12 @@ struct RaopStatus {
 
 class Raop {
  public:
-  Raop(const std::string raop_ip_addr) : raop_ip_addr_(raop_ip_addr) {}
+  Raop(const std::string rtsp_ip_addr)
+      : rtsp_ip_addr_(rtsp_ip_addr), rtsp_port_(7000) {}
 
  private:
-  int sockfd_;  // TCP client
+  helper::TCPClient rtsp_client_;
+
   std::string sid_;
   std::string sci_;
 
@@ -56,7 +59,8 @@ class Raop {
 
   bool is_started_ = false;
 
-  const std::string raop_ip_addr_;
+  const std::string rtsp_ip_addr_;
+  const uint32_t rtsp_port_;
 
  public:
   void Start();

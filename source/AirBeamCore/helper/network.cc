@@ -1,7 +1,5 @@
 // Copyright (c) 2025 ChenKS12138
 
-#pragma once
-
 #include "network.h"
 
 #include <arpa/inet.h>
@@ -11,7 +9,6 @@
 
 #include <cerrno>
 #include <cstring>
-#include <iostream>
 
 #include "errcode.h"
 
@@ -22,10 +19,10 @@ std::string NetAddr::ToString() const {
   return ip_ + ":" + std::to_string(port_);
 }
 
-TcpClient::TcpClient() = default;
-TcpClient::~TcpClient() { Close(); }
+TCPClient::TCPClient() = default;
+TCPClient::~TCPClient() { Close(); }
 
-ErrCode TcpClient::Connect(const std::string& ip, int port) {
+ErrCode TCPClient::Connect(const std::string& ip, int port) {
   if (sockfd_ != -1) Close();
   sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd_ < 0) return kErrTcpSocketCreate;
@@ -38,66 +35,66 @@ ErrCode TcpClient::Connect(const std::string& ip, int port) {
     return kErrTcpConnect;
   socklen_t len = sizeof(local_addr_);
   getsockname(sockfd_, (sockaddr*)&local_addr_, &len);
-  return kSuccess;
+  return kOk;
 }
 
-ErrCode TcpClient::Write(const std::string& data) {
+ErrCode TCPClient::Write(const std::string& data) {
   if (sockfd_ < 0) return kErrTcpSocketCreate;
   ssize_t sent = send(sockfd_, data.data(), data.size(), 0);
-  return sent < 0 ? kErrTcpSend : kSuccess;
+  return sent < 0 ? kErrTcpSend : kOk;
 }
 
-ErrCode TcpClient::Read(std::string& data) {
+ErrCode TCPClient::Read(std::string& data) {
   if (sockfd_ < 0) return kErrTcpSocketCreate;
   char buf[4096];
   ssize_t n = recv(sockfd_, buf, sizeof(buf), 0);
   if (n <= 0) return kErrTcpRecv;
   data.assign(buf, n);
-  return kSuccess;
+  return kOk;
 }
 
-ErrCode TcpClient::GetLocalNetAddr(NetAddr& addr) {
+ErrCode TCPClient::GetLocalNetAddr(NetAddr& addr) {
   if (sockfd_ < 0) return kErrTcpSocketCreate;
   char ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &local_addr_.sin_addr, ip, sizeof(ip));
   addr.ip_ = ip;
   addr.port_ = ntohs(local_addr_.sin_port);
-  return kSuccess;
+  return kOk;
 }
 
-ErrCode TcpClient::GetRemoteNetAddr(NetAddr& addr) {
+ErrCode TCPClient::GetRemoteNetAddr(NetAddr& addr) {
   if (sockfd_ < 0) return kErrTcpSocketCreate;
   char ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &remote_addr_.sin_addr, ip, sizeof(ip));
   addr.ip_ = ip;
   addr.port_ = ntohs(remote_addr_.sin_port);
-  return kSuccess;
+  return kOk;
 }
 
-void TcpClient::Close() {
+void TCPClient::Close() {
   if (sockfd_ != -1) {
     close(sockfd_);
     sockfd_ = -1;
   }
 }
 
-UdpServer::UdpServer() = default;
-UdpServer::~UdpServer() { Close(); }
+UDPServer::UDPServer() = default;
+UDPServer::~UDPServer() { Close(); }
 
-ErrCode UdpServer::Bind() {
+ErrCode UDPServer::Bind() {
   if (sockfd_ != -1) Close();
   sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd_ < 0) return kErrUdpSocketCreate;
   memset(&local_addr_, 0, sizeof(local_addr_));
   local_addr_.sin_family = AF_INET;
   local_addr_.sin_addr.s_addr = htonl(INADDR_ANY);
-  local_addr_.sin_port = htons(0);  // 随机端口
+  local_addr_.sin_port = htons(0);  // random
   if (bind(sockfd_, (sockaddr*)&local_addr_, sizeof(local_addr_)) < 0)
     return kErrUdpBind;
-  return kSuccess;
+  return kOk;
 }
 
-ErrCode UdpServer::Write(const std::string& data, const std::string& ip,
+ErrCode UDPServer::Write(const std::string& data, const std::string& ip,
                          int port) {
   if (sockfd_ < 0) return kErrUdpSocketCreate;
   sockaddr_in dest{};
@@ -107,10 +104,10 @@ ErrCode UdpServer::Write(const std::string& data, const std::string& ip,
     return kErrUdpAddrParse;
   ssize_t sent = sendto(sockfd_, data.data(), data.size(), 0, (sockaddr*)&dest,
                         sizeof(dest));
-  return sent < 0 ? kErrUdpSend : kSuccess;
+  return sent < 0 ? kErrUdpSend : kOk;
 }
 
-ErrCode UdpServer::Read(std::string& data, std::string& ip, int& port) {
+ErrCode UDPServer::Read(std::string& data, std::string& ip, int& port) {
   if (sockfd_ < 0) return kErrUdpSocketCreate;
   char buf[4096];
   sockaddr_in src{};
@@ -122,10 +119,10 @@ ErrCode UdpServer::Read(std::string& data, std::string& ip, int& port) {
   inet_ntop(AF_INET, &src.sin_addr, ipbuf, sizeof(ipbuf));
   ip = ipbuf;
   port = ntohs(src.sin_port);
-  return kSuccess;
+  return kOk;
 }
 
-void UdpServer::Close() {
+void UDPServer::Close() {
   if (sockfd_ != -1) {
     close(sockfd_);
     sockfd_ = -1;

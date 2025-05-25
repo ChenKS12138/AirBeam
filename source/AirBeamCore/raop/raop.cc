@@ -15,6 +15,7 @@
 #include "absl/strings/numbers.h"
 #include "constants.h"
 #include "fmt/core.h"
+#include "helper/errcode.h"
 #include "helper/random.h"
 #include "rtp.h"
 #include "rtsp.h"
@@ -22,18 +23,12 @@
 namespace AirBeamCore {
 
 namespace raop {
+
+using namespace helper;
+
 void Raop::Start() {
-  struct sockaddr_in server_addr;
-  sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd_ < 0) {
-    return;
-  }
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(7000);
-  inet_pton(AF_INET, raop_ip_addr_.c_str(), &server_addr.sin_addr);
-  if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) <
-      0) {
-    close(sockfd_);
+  int ret = rtsp_client_.Connect(rtsp_ip_addr_, rtsp_port_);
+  if (ret != kOk) {
     return;
   }
 
@@ -49,7 +44,7 @@ void Raop::Start() {
     ssrc_ =
         static_cast<uint32_t>(helper::RandomGenerator::GetInstance().GenU64());
     audio_peer_addr_.sin_port = htons(remote_audio_port_);
-    inet_pton(AF_INET, raop_ip_addr_.c_str(), &audio_peer_addr_.sin_addr);
+    inet_pton(AF_INET, rtsp_ip_addr_.c_str(), &audio_peer_addr_.sin_addr);
     audio_peer_addr_.sin_family = AF_INET;
     audio_peer_addr_len_ = sizeof(audio_peer_addr_);
   }
@@ -98,7 +93,7 @@ void Raop::SetVolume(uint8_t volume_percent) {
   status_.seq_number += 1;
   Volume volume = Volume::FromPercent(volume_percent);
   std::string body = fmt::format("volume: {}\r\n", volume.GetValue());
-  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
   std::string request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("SET_PARAMETER")
@@ -112,18 +107,18 @@ void Raop::SetVolume(uint8_t volume_percent) {
           .SetBody(body)
           .Build()
           .ToString();
-  int ret = send(sockfd_, request.c_str(), request.size(), 0);
-  if (ret < 0) {
+
+  int ret = rtsp_client_.Write(request);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  char buffer[1024];
-  size_t bytes_received = recv(sockfd_, buffer, sizeof(buffer), 0);
-  if (bytes_received < 0) {
+  std::string buffer;
+  ret = rtsp_client_.Read(buffer);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  buffer[bytes_received] = '\0';
 }
 
 void Raop::GenerateID() {
@@ -134,13 +129,13 @@ void Raop::GenerateID() {
 }
 
 void Raop::Announce() {
-  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
   // TODO (cattchen) remove hardcode ip
   std::vector<std::tuple<std::string, std::string>> sdp_map = {
       {"v", "0"},
       {"o", fmt::format("iTunes {} 0 IN IP4 192.168.123.157", sid_)},
       {"s", "iTunes"},
-      {"c", fmt::format("IN IP4 {}", raop_ip_addr_)},
+      {"c", fmt::format("IN IP4 {}", rtsp_ip_addr_)},
       {"t", "0 0"},
       {"m", "audio 0 RTP/AVP 96"},
       {"a", "rtpmap:96 L16/44100/2"}};
@@ -157,18 +152,17 @@ void Raop::Announce() {
           .SetBody(sdp)
           .Build()
           .ToString();
-  int ret = send(sockfd_, request.c_str(), request.size(), 0);
-  if (ret < 0) {
+  int ret = rtsp_client_.Write(request);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  char buffer[1024];
-  int bytes_received = recv(sockfd_, buffer, sizeof(buffer), 0);
-  if (bytes_received < 0) {
+  std::string buffer;
+  ret = rtsp_client_.Read(buffer);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  buffer[bytes_received] = '\0';
 }
 
 void Raop::BindCtrlAndTimePort() {
@@ -265,7 +259,7 @@ void Raop::BindCtrlAndTimePort() {
 }
 
 void Raop::Setup() {
-  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
   std::vector<std::tuple<std::string, std::string>> transport_params = {
       {"interleaved", "0-1"},
       {"mode", "record"},
@@ -284,19 +278,18 @@ void Raop::Setup() {
           .AddHeader("Client-Instance", sci_)
           .Build()
           .ToString();
-  int ret = send(sockfd_, request.c_str(), request.size(), 0);
+  int ret = rtsp_client_.Write(request);
   if (ret < 0) {
     exit(-1);
     return;
   }
-  char buffer[1024];
-  size_t bytes_received = recv(sockfd_, buffer, sizeof(buffer), 0);
-  if (bytes_received < 0) {
+  std::string buffer;
+  ret = rtsp_client_.Read(buffer);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  buffer[bytes_received] = '\0';
-  auto resp = RtspMessage::Parse({buffer, bytes_received});
+  auto resp = RtspMessage::Parse({buffer.c_str(), buffer.size()});
   auto transport_map = ParseKVStr(resp.GetHeader("Transport"), "=", ";");
   if (!absl::SimpleAtoi(transport_map["server_port"], &remote_audio_port_)) {
     exit(-1);
@@ -316,7 +309,7 @@ void Raop::Record() {
   uint64_t start_seq = status_.seq_number + 1;
   uint64_t start_ts = NtpTime::Now().IntoTimestamp(kSampleRate44100);
   // TODO(catchen) remove hard code sid
-  std::string uri = fmt::format("rtsp://{}/0812982985", raop_ip_addr_);
+  std::string uri = fmt::format("rtsp://{}/0812982985", rtsp_ip_addr_);
   std::string range = "npt=0-";
   std::vector<std::tuple<std::string, std::string>> rtp_info_map = {
       {"seq", std::to_string(start_seq)},
@@ -337,19 +330,18 @@ void Raop::Record() {
           .AddHeader("Session", "1")
           .Build()
           .ToString();
-  int ret = send(sockfd_, request.c_str(), request.size(), 0);
+  int ret = rtsp_client_.Write(request);
   if (ret < 0) {
     exit(-1);
     return;
   }
-  char buffer[1024];
-  size_t bytes_received = recv(sockfd_, buffer, sizeof(buffer), 0);
-  if (bytes_received < 0) {
+  std::string buffer;
+  ret = rtsp_client_.Read(buffer);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
-  buffer[bytes_received] = '\0';
-  auto resp = RtspMessage::Parse({buffer, bytes_received});
+  auto resp = RtspMessage::Parse({buffer.c_str(), buffer.size()});
   resp.GetHeader("Audio-Latency");
   if (!absl::SimpleAtoi(resp.GetHeader("Audio-Latency"), &latency_)) {
     exit(-1);
@@ -359,7 +351,7 @@ void Raop::Record() {
 
 void Raop::SyncStart() {
   ctrl_peer_addr_.sin_port = htons(remote_ctrl_port_);
-  inet_pton(AF_INET, raop_ip_addr_.c_str(), &ctrl_peer_addr_.sin_addr);
+  inet_pton(AF_INET, rtsp_ip_addr_.c_str(), &ctrl_peer_addr_.sin_addr);
   ctrl_peer_addr_.sin_family = AF_INET;
   ctrl_peer_addr_len_ = sizeof(ctrl_peer_addr_);
   (new std::thread([this]() {
@@ -409,18 +401,17 @@ void Raop::KeepAlive() {
               .AddHeader("Session", "1")
               .Build()
               .ToString();
-      int ret = send(sockfd_, request.c_str(), request.size(), 0);
-      if (ret < 0) {
+      int ret = rtsp_client_.Write(request);
+      if (ret != kOk) {
         exit(-1);
         return;
       }
-      char buffer[1024];
-      int bytes_received = recv(sockfd_, buffer, sizeof(buffer), 0);
-      if (bytes_received < 0) {
+      std::string buffer;
+      ret = rtsp_client_.Read(buffer);
+      if (ret != kOk) {
         exit(-1);
         return;
       }
-      buffer[bytes_received] = '\0';
     }
   }))->detach();
 }

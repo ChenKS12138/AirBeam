@@ -16,10 +16,10 @@ struct NetAddr {
   std::string ToString() const;
 };
 
-class TcpClient {
+class TCPClient {
  public:
-  TcpClient();
-  ~TcpClient();
+  TCPClient();
+  ~TCPClient();
 
   ErrCode Connect(const std::string& ip, int port);
   ErrCode Write(const std::string& data);
@@ -34,10 +34,10 @@ class TcpClient {
   struct sockaddr_in local_addr_ {};
 };
 
-class UdpServer {
+class UDPServer {
  public:
-  UdpServer();
-  ~UdpServer();
+  UDPServer();
+  ~UDPServer();
 
   ErrCode Bind();
   ErrCode Write(const std::string& data, const std::string& ip, int port);
