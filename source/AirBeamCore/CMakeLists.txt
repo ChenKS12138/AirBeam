@@ -23,7 +23,7 @@ CPMAddPackage("gh:fmtlib/fmt#7.1.3")
 target_link_libraries(
   ${AIRBEAM_CORE_TARGET}
 
-  fmt
+  fmt::fmt
   absl::strings
   absl::base
 )
