@@ -21,7 +21,7 @@
 #include "aspl/IORequestHandler.hpp"
 #include "aspl/Plugin.hpp"
 #include "bonjour_browser.hpp"
-#include "helper/logger.hpp"
+#include "helper/logger.h"
 #include "raop/codec.h"
 #include "raop/fifo.h"
 #include "raop/raop.h"

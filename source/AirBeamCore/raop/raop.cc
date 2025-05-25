@@ -16,40 +16,13 @@
 #include "absl/strings/numbers.h"
 #include "constants.h"
 #include "fmt/core.h"
+#include "helper/random.h"
 #include "rtp.h"
 #include "rtsp.h"
 
 namespace AirBeamCore {
 
 namespace raop {
-uint64_t generateRandomU64() {
-  std::random_device rd;
-  std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis;
-  return dis(gen);
-}
-
-static std::string generateRandomNumberString(int length) {
-  static std::mt19937 gen(std::random_device{}());
-  std::uniform_int_distribution<int> dist(0, 9);
-  std::string result;
-  result.reserve(length);
-  for (int i = 0; i < length; ++i) {
-    result += fmt::format("{}", dist(gen));
-  }
-  return result;
-}
-
-static std::string generateRandomHexString(int length) {
-  static const char hex_chars[] = "0123456789abcdef";
-  std::string result;
-  result.reserve(length);
-  for (int i = 0; i < length; ++i) {
-    result += hex_chars[std::rand() % 16];
-  }
-  return result;
-}
-
 void Raop::Start() {
   struct sockaddr_in server_addr;
   sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -73,7 +46,8 @@ void Raop::Start() {
   KeepAlive();
   FirstSendSync();
   {
-    ssrc_ = static_cast<uint32_t>(generateRandomU64());
+    ssrc_ =
+        static_cast<uint32_t>(helper::RandomGenerator::GetInstance().GenU64());
     audio_peer_addr_.sin_port = htons(remote_audio_port_);
     inet_pton(AF_INET, raop_ip_addr_.c_str(), &audio_peer_addr_.sin_addr);
     audio_peer_addr_.sin_family = AF_INET;
@@ -146,9 +120,9 @@ void Raop::SetVolume(uint8_t volume_percent) {
 
 void Raop::GenerateID() {
   constexpr int kSidLen = 10;
-  sid_ = generateRandomNumberString(kSidLen);
+  sid_ = helper::RandomGenerator::GetInstance().GenNumStr(kSidLen);
   constexpr int kSciLen = 16;
-  sci_ = generateRandomHexString(kSciLen);
+  sid_ = helper::RandomGenerator::GetInstance().GenHexStr(kSciLen);
 }
 
 void Raop::Announce() {

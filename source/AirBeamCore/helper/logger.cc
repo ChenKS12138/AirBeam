@@ -1,6 +1,6 @@
 // Copyright (c) 2025 ChenKS12138
 
-#pragma once
+#include "logger.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@ namespace AirBeamCore {
 namespace helper {
 #ifdef BUILD_DEBUG
 #warning message("Building in debug mode")
-inline void ABDebugLog(const char* format, ...) {
+void ABDebugLog(const char* format, ...) {
   std::string with_prefix = "AirBeamASPDebug " + std::string(format);
   va_list args;
   va_start(args, format);
@@ -21,7 +21,7 @@ inline void ABDebugLog(const char* format, ...) {
 }
 
 #else
-inline void ABDebugLog(const char* format, ...) {}
+void ABDebugLog(const char* format, ...) {}
 #endif
 }  // namespace helper
 }  // namespace AirBeamCore

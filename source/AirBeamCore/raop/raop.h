@@ -7,15 +7,14 @@
 
 #include <string>
 
+#include "helper/random.h"
 #include "raop/rtp.h"
 
 namespace AirBeamCore {
 namespace raop {
-uint64_t generateRandomU64();
-
 struct RaopStatus {
  public:
-  uint16_t seq_number = generateRandomU64();
+  uint16_t seq_number = helper::RandomGenerator::GetInstance().GenU64();
   uint64_t head_ts = 0;
   uint64_t first_ts = 0;
 };
