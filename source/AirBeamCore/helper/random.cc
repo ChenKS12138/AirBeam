@@ -1,7 +1,5 @@
 // Copyright (c) 2025 ChenKS12138
 
-#pragma once
-
 #include "random.h"
 
 #include <random>

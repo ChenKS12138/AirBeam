@@ -40,10 +40,11 @@ TEST(RtspMessageTest, ParseBasic) {
       "\r\n"
       "body_content";
   RtspMessage msg = RtspMessage::Parse(content);
-  EXPECT_EQ(msg.start_line_, "OPTIONS rtsp://example.com/media.mp4 RTSP/1.0");
-  EXPECT_EQ(msg.headers_["CSeq"], "1");
-  EXPECT_EQ(msg.headers_["User-Agent"], "TestAgent");
-  EXPECT_EQ(msg.body_, "body_content");
+  EXPECT_EQ(msg.GetStartLine(),
+            "OPTIONS rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(msg.GetHeader("CSeq"), "1");
+  EXPECT_EQ(msg.GetHeader("User-Agent"), "TestAgent");
+  EXPECT_EQ(msg.GetBody(), "body_content");
 }
 
 TEST(RtspMessageTest, ParseNoBody) {
@@ -52,22 +53,100 @@ TEST(RtspMessageTest, ParseNoBody) {
       "CSeq: 2\r\n"
       "\r\n";
   RtspMessage msg = RtspMessage::Parse(content);
-  EXPECT_EQ(msg.start_line_, "DESCRIBE rtsp://example.com/media.mp4 RTSP/1.0");
-  EXPECT_EQ(msg.headers_["CSeq"], "2");
-  EXPECT_EQ(msg.body_, "");
+  EXPECT_EQ(msg.GetStartLine(),
+            "DESCRIBE rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(msg.GetHeader("CSeq"), "2");
+  EXPECT_EQ(msg.GetBody(), "");
 }
 
 TEST(RtspMessageTest, ToString) {
-  RtspMessage msg;
-  msg.start_line_ = "ANNOUNCE rtsp://example.com/media.mp4 RTSP/1.0";
-  msg.headers_ = {{"CSeq", "3"}, {"Session", "12345"}};
-  msg.body_ = "test_body";
-  std::string str = msg.ToString();
-  EXPECT_NE(str.find("start_line:"), std::string::npos);
-  EXPECT_NE(str.find("ANNOUNCE rtsp://example.com/media.mp4 RTSP/1.0"),
-            std::string::npos);
-  EXPECT_NE(str.find("CSeq: 3"), std::string::npos);
-  EXPECT_NE(str.find("Session: 12345"), std::string::npos);
-  EXPECT_NE(str.find("body:"), std::string::npos);
-  EXPECT_NE(str.find("test_body"), std::string::npos);
+  RtspRespMessage msg =
+      RtspMsgBuilder<RtspRespMessage>()
+          .SetStatusCode(200)
+          .SetStatusText("OK")
+          .AddHeader("CSeq", "1")
+          .AddHeader("Content-Type", "application/sdp")
+          .SetBody(
+              "v=0\r\n"
+              "o=- 915761136 1 IN IP4 192.168.3.10\r\n"
+              "s=Unnamed\r\n"
+              "i=RTP/AVP session\r\n"
+              "c=IN IP4 0.0.0.0\r\n"
+              "t=0 0\r\n"
+              "m=audio 0 RTP/AVP 96\r\n"
+              "a=rtpmap:96 mpeg4-generic/44100/2\r\n"
+              "a=fmtp:96 streamtype=5; profile-level-id=15; "
+              "mode=AAC-hbr; sizelength=13; indexlength=3; "
+              "indexdeltalength=3;\r\n"
+              "a=cliprect:0,0,320,240\r\n"
+              "a=framerate:29.970000\r\n"
+              "a=control:rtsp://192.168.3.10:7000/raop_0/audio")
+          .Build();
+
+  std::string expected_string =
+      "RTSP/1.0 200 OK\r\n"
+      "CSeq: 1\r\n"
+      "Content-Type: application/sdp\r\n"
+      "\r\n"
+      "v=0\r\n"
+      "o=- 915761136 1 IN IP4 192.168.3.10\r\n"
+      "s=Unnamed\r\n"
+      "i=RTP/AVP session\r\n"
+      "c=IN IP4 0.0.0.0\r\n"
+      "t=0 0\r\n"
+      "m=audio 0 RTP/AVP 96\r\n"
+      "a=rtpmap:96 mpeg4-generic/44100/2\r\n"
+      "a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; "
+      "sizelength=13; indexlength=3; indexdeltalength=3;\r\n"
+      "a=cliprect:0,0,320,240\r\n"
+      "a=framerate:29.970000\r\n"
+      "a=control:rtsp://192.168.3.10:7000/raop_0/audio";
+
+  EXPECT_EQ(msg.ToString(), expected_string);
+}
+
+TEST(RtspMessageBuilderTest, BasicBuild) {
+  RtspReqMessage msg = RtspMsgBuilder<RtspReqMessage>()
+                           .SetMethod("OPTIONS")
+                           .SetUri("rtsp://example.com/media.mp4")
+                           .AddHeader("CSeq", "1")
+                           .AddHeader("User-Agent", "TestAgent")
+                           .SetBody("body_content")
+                           .Build();
+
+  EXPECT_EQ(msg.GetStartLine(),
+            "OPTIONS rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(msg.GetHeader("CSeq"), "1");
+  EXPECT_EQ(msg.GetHeader("User-Agent"), "TestAgent");
+  EXPECT_EQ(msg.GetBody(), "body_content");
+
+  std::string content = msg.ToString();
+  RtspMessage parsed_msg = RtspMessage::Parse(content);
+
+  EXPECT_EQ(parsed_msg.GetStartLine(),
+            "OPTIONS rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(parsed_msg.GetHeader("CSeq"), "1");
+  EXPECT_EQ(parsed_msg.GetHeader("User-Agent"), "TestAgent");
+  EXPECT_EQ(parsed_msg.GetBody(), "body_content");
+}
+
+TEST(RtspMessageBuilderTest, NoBodyBuild) {
+  RtspReqMessage msg = RtspMsgBuilder<RtspReqMessage>()
+                           .SetMethod("DESCRIBE")
+                           .SetUri("rtsp://example.com/media.mp4")
+                           .AddHeader("CSeq", "2")
+                           .Build();
+
+  EXPECT_EQ(msg.GetStartLine(),
+            "DESCRIBE rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(msg.GetHeader("CSeq"), "2");
+  EXPECT_EQ(msg.GetBody(), "");
+
+  std::string content = msg.ToString();
+  RtspMessage parsed_msg = RtspMessage::Parse(content);
+
+  EXPECT_EQ(parsed_msg.GetStartLine(),
+            "DESCRIBE rtsp://example.com/media.mp4 RTSP/1.0");
+  EXPECT_EQ(parsed_msg.GetHeader("CSeq"), "2");
+  EXPECT_EQ(parsed_msg.GetBody(), "");
 }

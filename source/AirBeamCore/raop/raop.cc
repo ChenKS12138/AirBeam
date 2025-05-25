@@ -98,12 +98,20 @@ void Raop::SetVolume(uint8_t volume_percent) {
   status_.seq_number += 1;
   Volume volume = Volume::FromPercent(volume_percent);
   std::string body = fmt::format("volume: {}\r\n", volume.GetValue());
-  std::string request = fmt::format(
-      "SET_PARAMETER rtsp://{}/{} "
-      "RTSP/1.0\r\nContent-Type: text/parameters\r\nContent-Length: "
-      "{}\r\nCSeq: {}\r\nUser-Agent: iTunes/7.6.2 (Windows; "
-      "N;)\r\nClient-Instance: {}\r\nSession: 1\r\n\r\n{}",
-      raop_ip_addr_, sid_, body.size(), status_.seq_number, sci_, body);
+  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  std::string request =
+      AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
+          .SetMethod("SET_PARAMETER")
+          .SetUri(uri)
+          .AddHeader("Content-Type", "text/parameters")
+          .AddHeader("Content-Length", std::to_string(body.size()))
+          .AddHeader("CSeq", std::to_string(status_.seq_number))
+          .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
+          .AddHeader("Client-Instance", sci_)
+          .AddHeader("Session", "1")
+          .SetBody(body)
+          .Build()
+          .ToString();
   int ret = send(sockfd_, request.c_str(), request.size(), 0);
   if (ret < 0) {
     exit(-1);
@@ -126,17 +134,24 @@ void Raop::GenerateID() {
 }
 
 void Raop::Announce() {
-  std::string request = fmt::format(
-      "ANNOUNCE rtsp://{}/{} RTSP/1.0\r\n"
-      "Content-Type: application/sdp\r\n"
-      "Content-Length: 141\r\n"
-      "CSeq: 1\r\n"
-      "User-Agent: iTunes/7.6.2 (Windows; N;)\r\n"
-      "Client-Instance: {}\r\n\r\n"
-      "v=0\r\no=iTunes 0812982985 0 IN IP4 "
-      "192.168.123.157\r\ns=iTunes\r\nc=IN IP4 {}\r\nt=0 "
-      "0\r\nm=audio 0 RTP/AVP 96\r\na=rtpmap:96 L16/44100/2\r\n",
-      raop_ip_addr_, sid_, sci_, raop_ip_addr_);
+  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  // TODO (cattchen) remove hardcode ip
+  std::string sdp = fmt::format(
+      "v=0\r\no=iTunes 0812982985 0 IN IP4 192.168.123.157\r\ns=iTunes\r\nc=IN "
+      "IP4 {}\r\nt=0 0\r\nm=audio 0 RTP/AVP 96\r\na=rtpmap:96 L16/44100/2\r\n",
+      raop_ip_addr_);
+  std::string request =
+      AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
+          .SetMethod("ANNOUNCE")
+          .SetUri(uri)
+          .AddHeader("Content-Type", "application/sdp")
+          .AddHeader("Content-Length", std::to_string(sdp.size()))
+          .AddHeader("CSeq", "1")
+          .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
+          .AddHeader("Client-Instance", sci_)
+          .SetBody(sdp)
+          .Build()
+          .ToString();
   int ret = send(sockfd_, request.c_str(), request.size(), 0);
   if (ret < 0) {
     exit(-1);
@@ -245,16 +260,21 @@ void Raop::BindCtrlAndTimePort() {
 }
 
 void Raop::Setup() {
-  std::string request = fmt::format(
-      "SETUP rtsp://{}/{} RTSP/1.0\r\n"
-      "Transport: "
+  std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  std::string transport = fmt::format(
       "RTP/AVP/"
-      "UDP;unicast;interleaved=0-1;mode=record;control_port={};timing_"
-      "port={}\r\n"
-      "CSeq: 2\r\n"
-      "User-Agent: iTunes/7.6.2 (Windows; N;)\r\n"
-      "Client-Instance: {}\r\n\r\n",
-      raop_ip_addr_, sid_, ctrl_port_, time_port_, sci_);
+      "UDP;unicast;interleaved=0-1;mode=record;control_port={};timing_port={}",
+      ctrl_port_, time_port_);
+  std::string request =
+      AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
+          .SetMethod("SETUP")
+          .SetUri(uri)
+          .AddHeader("Transport", transport)
+          .AddHeader("CSeq", "2")
+          .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
+          .AddHeader("Client-Instance", sci_)
+          .Build()
+          .ToString();
   int ret = send(sockfd_, request.c_str(), request.size(), 0);
   if (ret < 0) {
     exit(-1);
@@ -268,16 +288,16 @@ void Raop::Setup() {
   }
   buffer[bytes_received] = '\0';
   auto resp = RtspMessage::Parse({buffer, bytes_received});
-  auto transport = ParseKVStr(resp.headers_["Transport"], "=", ";");
-  if (!absl::SimpleAtoi(transport["server_port"], &remote_audio_port_)) {
+  auto transport_map = ParseKVStr(resp.GetHeader("Transport"), "=", ";");
+  if (!absl::SimpleAtoi(transport_map["server_port"], &remote_audio_port_)) {
     exit(-1);
     return;
   }
-  if (!absl::SimpleAtoi(transport["control_port"], &remote_ctrl_port_)) {
+  if (!absl::SimpleAtoi(transport_map["control_port"], &remote_ctrl_port_)) {
     exit(-1);
     return;
   }
-  if (!absl::SimpleAtoi(transport["timing_port"], &remote_time_port_)) {
+  if (!absl::SimpleAtoi(transport_map["timing_port"], &remote_time_port_)) {
     exit(-1);
     return;
   }
@@ -286,12 +306,24 @@ void Raop::Setup() {
 void Raop::Record() {
   uint64_t start_seq = status_.seq_number + 1;
   uint64_t start_ts = NtpTime::Now().IntoTimestamp(kSampleRate44100);
-  std::string request = fmt::format(
-      "RECORD rtsp://{}/0812982985 RTSP/1.0\r\nRange: "
-      "npt=0-\r\nRTP-Info: seq={};rtptime={}\r\nCSeq: "
-      "3\r\nUser-Agent: iTunes/7.6.2 (Windows; N;)\r\nClient-Instance: "
-      "8fae761ff0c7c827\r\nSession: 1\r\n\r\n",
-      raop_ip_addr_, start_seq, start_ts);
+  // TODO(catchen) remove hard code sid
+  std::string uri = fmt::format("rtsp://{}/0812982985", raop_ip_addr_);
+  std::string range = "npt=0-";
+  std::string rtp_info = fmt::format("seq={};rtptime={}", start_seq, start_ts);
+  std::string request =
+      AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
+          .SetMethod("RECORD")
+          .SetUri(uri)
+          .AddHeader("Range", range)
+          .AddHeader("RTP-Info", rtp_info)
+          // TODO(cattchen) remove hard code cseq
+          .AddHeader("CSeq", "3")
+          .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
+          // TODO(cattchen) remove hard code ci
+          .AddHeader("Client-Instance", "8fae761ff0c7c827")
+          .AddHeader("Session", "1")
+          .Build()
+          .ToString();
   int ret = send(sockfd_, request.c_str(), request.size(), 0);
   if (ret < 0) {
     exit(-1);
@@ -305,8 +337,8 @@ void Raop::Record() {
   }
   buffer[bytes_received] = '\0';
   auto resp = RtspMessage::Parse({buffer, bytes_received});
-  resp.headers_["Audio-Latency"];
-  if (!absl::SimpleAtoi(resp.headers_["Audio-Latency"], &latency_)) {
+  resp.GetHeader("Audio-Latency");
+  if (!absl::SimpleAtoi(resp.GetHeader("Audio-Latency"), &latency_)) {
     exit(-1);
     return;
   }
@@ -353,11 +385,17 @@ void Raop::KeepAlive() {
   (new std::thread([this]() {
     while (true) {
       std::this_thread::sleep_for(std::chrono::seconds(5));
-      std::string request = fmt::format(
-          "OPTIONS * RTSP/1.0\r\nCSeq: 5\r\nUser-Agent: iTunes/7.6.2 "
-          "(Windows; "
-          "N;)\r\nClient-Instance: {}\r\nSession: 1\r\n\r\n",
-          sci_);
+      std::string request =
+          AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
+              .SetMethod("OPTIONS")
+              .SetUri("*")
+              // TODO(cattchen) remove hard code cseq
+              .AddHeader("CSeq", "5")
+              .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
+              .AddHeader("Client-Instance", sci_)
+              .AddHeader("Session", "1")
+              .Build()
+              .ToString();
       int ret = send(sockfd_, request.c_str(), request.size(), 0);
       if (ret < 0) {
         exit(-1);

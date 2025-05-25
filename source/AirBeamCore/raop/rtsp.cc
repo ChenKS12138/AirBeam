@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "absl/strings/str_split.h"
+#include "fmt/core.h"
 
 namespace AirBeamCore {
 namespace raop {
@@ -56,23 +57,50 @@ RtspMessage RtspMessage::Parse(const std::string& content) {
     }
     it += 2;
 
-    msg.headers_[key] = value;
+    msg.headers_.emplace_back(key, value);
   }
 
   msg.body_ = std::string(it, content.end());
 
   return msg;
 }
-
 std::string RtspMessage::ToString() const {
   std::stringstream ss;
-  ss << "start_line:" << std::endl << start_line_ << std::endl;
-  ss << "headers:" << std::endl;
-  for (const auto& header : headers_) {
-    ss << header.first << ": " << header.second << std::endl;
+  ss << start_line_ << "\r\n";
+  for (const auto& [key, value] : headers_) {
+    ss << key << ": " << value + "\r\n";
   }
-  ss << "body:" << std::endl << body_ << std::endl;
+  ss << "\r\n";
+  ss << body_;
   return ss.str();
+}
+
+std::string RtspMessage::GetHeader(const std::string& key) {
+  for (const auto& [key_, value] : headers_) {
+    if (key_ == key) {
+      return value;
+    }
+  }
+  return "";
+}
+
+template <>
+RtspReqMessage RtspMsgBuilder<RtspReqMessage>::Build() {
+  RtspReqMessage message;
+  message.start_line_ = fmt::format("{} {} RTSP/1.0", method_, uri_);
+  message.headers_ = headers_;
+  message.body_ = body_;
+  return message;
+}
+
+template <>
+RtspRespMessage RtspMsgBuilder<RtspRespMessage>::Build() {
+  RtspRespMessage message;
+  message.start_line_ =
+      fmt::format("RTSP/1.0 {} {}", status_code_, status_text_);
+  message.headers_ = headers_;
+  message.body_ = body_;
+  return message;
 }
 }  // namespace raop
 }  // namespace AirBeamCore

@@ -24,7 +24,7 @@ class Raop {
   Raop(const std::string raop_ip_addr) : raop_ip_addr_(raop_ip_addr) {}
 
  private:
-  int sockfd_;
+  int sockfd_;  // TCP client
   std::string sid_;
   std::string sci_;
 
@@ -32,9 +32,9 @@ class Raop {
   int time_port_;
   int audio_port_;
 
-  int ctrl_sockfd_;
-  int time_sockfd_;
-  int audio_sockfd_;
+  int ctrl_sockfd_;   // UDP server
+  int time_sockfd_;   // UDP server
+  int audio_sockfd_;  // UDP server
 
   struct sockaddr_in ctrl_peer_addr_;
   socklen_t ctrl_peer_addr_len_;
