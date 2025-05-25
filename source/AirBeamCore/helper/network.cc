@@ -94,20 +94,19 @@ ErrCode UDPServer::Bind() {
   return kOk;
 }
 
-ErrCode UDPServer::Write(const std::string& data, const std::string& ip,
-                         int port) {
+ErrCode UDPServer::Write(const NetAddr& remote_addr, const std::string& data) {
   if (sockfd_ < 0) return kErrUdpSocketCreate;
   sockaddr_in dest{};
   dest.sin_family = AF_INET;
-  dest.sin_port = htons(port);
-  if (inet_pton(AF_INET, ip.c_str(), &dest.sin_addr) <= 0)
+  dest.sin_port = htons(remote_addr.port_);
+  if (inet_pton(AF_INET, remote_addr.ip_.c_str(), &dest.sin_addr) <= 0)
     return kErrUdpAddrParse;
   ssize_t sent = sendto(sockfd_, data.data(), data.size(), 0, (sockaddr*)&dest,
                         sizeof(dest));
   return sent < 0 ? kErrUdpSend : kOk;
 }
 
-ErrCode UDPServer::Read(std::string& data, std::string& ip, int& port) {
+ErrCode UDPServer::Read(NetAddr& remote_addr, std::string& data) {
   if (sockfd_ < 0) return kErrUdpSocketCreate;
   char buf[4096];
   sockaddr_in src{};
@@ -117,8 +116,16 @@ ErrCode UDPServer::Read(std::string& data, std::string& ip, int& port) {
   data.assign(buf, n);
   char ipbuf[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &src.sin_addr, ipbuf, sizeof(ipbuf));
-  ip = ipbuf;
-  port = ntohs(src.sin_port);
+  remote_addr.ip_ = ipbuf;
+  remote_addr.port_ = ntohs(src.sin_port);
+  return kOk;
+}
+ErrCode UDPServer::GetLocalNetAddr(NetAddr& addr) {
+  if (sockfd_ < 0) return kErrUdpSocketCreate;
+  char ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &local_addr_.sin_addr, ip, sizeof(ip));
+  addr.ip_ = ip;
+  addr.port_ = ntohs(local_addr_.sin_port);
   return kOk;
 }
 

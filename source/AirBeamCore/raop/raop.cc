@@ -45,10 +45,6 @@ void Raop::Start() {
   {
     ssrc_ =
         static_cast<uint32_t>(helper::RandomGenerator::GetInstance().GenU64());
-    audio_peer_addr_.sin_port = htons(remote_audio_port_);
-    inet_pton(AF_INET, rtsp_ip_addr_.c_str(), &audio_peer_addr_.sin_addr);
-    audio_peer_addr_.sin_family = AF_INET;
-    audio_peer_addr_len_ = sizeof(audio_peer_addr_);
   }
   is_started_ = true;
 }
@@ -81,10 +77,12 @@ void Raop::SendChunk(const RtpAudioPacketChunk& chunk) {
   first_pkt_ = false;
   std::vector<uint8_t> buffer;
   packet.Serialize(buffer);
-  int send_ret =
-      sendto(audio_sockfd_, buffer.data(), buffer.size(), 0,
-             (struct sockaddr*)&audio_peer_addr_, ctrl_peer_addr_len_);
-  if (send_ret < 0) {
+  std::string data;
+  data.resize(buffer.size());
+  memcpy(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(data.c_str())),
+         buffer.data(), buffer.size());
+  int ret = audio_server_.Write(remote_audio_addr_, data);
+  if (ret != kOk) {
     exit(-1);
     return;
   }
@@ -234,26 +232,10 @@ void Raop::BindCtrlAndTimePort() {
       }
     }
   }))->detach();
-  audio_sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-  if (audio_sockfd_ < 0) {
+  int ret = audio_server_.Bind();
+  if (ret != kOk) {
     exit(-1);
   }
-  struct sockaddr_in audio_addr;
-  audio_addr.sin_family = AF_INET;
-  audio_addr.sin_addr.s_addr = INADDR_ANY;
-  audio_addr.sin_port = 0;
-  if (::bind(audio_sockfd_, (struct sockaddr*)&audio_addr, sizeof(audio_addr)) <
-      0) {
-    close(audio_sockfd_);
-    exit(-1);
-  }
-  addr_len = sizeof(audio_addr);
-  if (getsockname(audio_sockfd_, (struct sockaddr*)&audio_addr, &addr_len) <
-      0) {
-    close(audio_sockfd_);
-    exit(-1);
-  }
-  audio_port_ = ntohs(audio_addr.sin_port);
 }
 
 void Raop::Setup() {
@@ -284,7 +266,8 @@ void Raop::Setup() {
   }
 
   auto transport_map = ParseKVStr(response.GetHeader("Transport"), "=", ";");
-  if (!absl::SimpleAtoi(transport_map["server_port"], &remote_audio_port_)) {
+  if (!absl::SimpleAtoi(transport_map["server_port"],
+                        &remote_audio_addr_.port_)) {
     exit(-1);
     return;
   }
@@ -296,6 +279,15 @@ void Raop::Setup() {
     exit(-1);
     return;
   }
+
+  NetAddr rtsp_remote_addr;
+  ret = rtsp_client_.GetRemoteNetAddr(rtsp_remote_addr);
+  if (ret != kOk) {
+    exit(-1);
+    return;
+  }
+
+  remote_audio_addr_.ip_ = rtsp_remote_addr.ip_;
 }
 
 void Raop::Record() {

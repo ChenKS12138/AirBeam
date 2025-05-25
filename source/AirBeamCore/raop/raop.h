@@ -31,24 +31,26 @@ class Raop {
  private:
   raop::RTSPClient rtsp_client_;
 
+  helper::UDPServer ctrl_server_;
+  helper::UDPServer time_server_;
+  helper::UDPServer audio_server_;
+
+  helper::NetAddr remote_audio_addr_;
+  helper::NetAddr remote_time_addr_;
+  helper::NetAddr remote_ctrl_addr_;
+
   std::string sid_;
   std::string sci_;
 
   int ctrl_port_;
   int time_port_;
-  int audio_port_;
 
-  int ctrl_sockfd_;   // UDP server
-  int time_sockfd_;   // UDP server
-  int audio_sockfd_;  // UDP server
+  int ctrl_sockfd_;  // UDP server
+  int time_sockfd_;  // UDP server
 
   struct sockaddr_in ctrl_peer_addr_;
   socklen_t ctrl_peer_addr_len_;
 
-  struct sockaddr_in audio_peer_addr_;
-  socklen_t audio_peer_addr_len_;
-
-  int remote_audio_port_;
   int remote_time_port_;
   int remote_ctrl_port_;
 

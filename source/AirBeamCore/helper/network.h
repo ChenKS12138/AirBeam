@@ -40,8 +40,9 @@ class UDPServer {
   virtual ~UDPServer();
 
   ErrCode Bind();
-  ErrCode Write(const std::string& data, const std::string& ip, int port);
-  ErrCode Read(std::string& data, std::string& ip, int& port);
+  ErrCode Write(const NetAddr& remote_addr, const std::string& data);
+  ErrCode Read(NetAddr& remote_addr, std::string& data);
+  ErrCode GetLocalNetAddr(NetAddr& addr);
   void Close();
 
  private:
