@@ -42,12 +42,6 @@ class Raop {
   std::string sid_;
   std::string sci_;
 
-  int time_port_;
-
-  int time_sockfd_;  // UDP server
-
-  int remote_time_port_;
-
   uint64_t latency_ = 0;
 
   bool first_pkt_ = true;
