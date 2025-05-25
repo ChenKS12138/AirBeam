@@ -130,16 +130,17 @@ void Raop::GenerateID() {
   constexpr int kSidLen = 10;
   sid_ = helper::RandomGenerator::GetInstance().GenNumStr(kSidLen);
   constexpr int kSciLen = 16;
-  sid_ = helper::RandomGenerator::GetInstance().GenHexStr(kSciLen);
+  sci_ = helper::RandomGenerator::GetInstance().GenHexStr(kSciLen);
 }
 
 void Raop::Announce() {
   std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
+  // TODO (cattchen) remove hardcode sid
   // TODO (cattchen) remove hardcode ip
   std::string sdp = fmt::format(
-      "v=0\r\no=iTunes 0812982985 0 IN IP4 192.168.123.157\r\ns=iTunes\r\nc=IN "
+      "v=0\r\no=iTunes {} 0 IN IP4 192.168.123.157\r\ns=iTunes\r\nc=IN "
       "IP4 {}\r\nt=0 0\r\nm=audio 0 RTP/AVP 96\r\na=rtpmap:96 L16/44100/2\r\n",
-      raop_ip_addr_);
+      sid_, raop_ip_addr_);
   std::string request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("ANNOUNCE")

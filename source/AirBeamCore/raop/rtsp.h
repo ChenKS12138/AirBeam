@@ -13,6 +13,10 @@ std::map<std::string, std::string> ParseKVStr(
     const std::string& content, const std::string& kv_delimiter,
     const std::string& entry_delimiter);
 
+std::string JoinKVStr(const std::map<std::string, std::string>& data,
+                      const std::string& kv_delimiter,
+                      const std::string& entry_delimiter);
+
 class RtspMessage {
  public:
   static RtspMessage Parse(const std::string& content);

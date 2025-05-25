@@ -31,6 +31,25 @@ TEST(ParseKVStrTest, CustomDelimiter) {
   EXPECT_EQ(result["k2"], "val2");
 }
 
+TEST(JoinKVStrTest, Basic) {
+  std::map<std::string, std::string> data = {
+      {"a", "1"}, {"b", "2"}, {"c", "3"}};
+  std::string result = JoinKVStr(data, ":", ";");
+  EXPECT_EQ(result, "a:1;b:2;c:3");
+}
+
+TEST(JoinKVStrTest, EmptyMap) {
+  std::map<std::string, std::string> data;
+  std::string result = JoinKVStr(data, ":", ";");
+  EXPECT_EQ(result, "");
+}
+
+TEST(JoinKVStrTest, CustomDelimiter) {
+  std::map<std::string, std::string> data = {{"k1", "val1"}, {"k2", "val2"}};
+  std::string result = JoinKVStr(data, "=", "|");
+  EXPECT_EQ(result, "k1=val1|k2=val2");
+}
+
 // RtspMessage 测试
 TEST(RtspMessageTest, ParseBasic) {
   std::string content =

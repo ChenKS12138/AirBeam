@@ -18,10 +18,29 @@ std::map<std::string, std::string> ParseKVStr(
   for (const auto& entry : entries) {
     std::vector<std::string> cols =
         absl::StrSplit(entry, absl::MaxSplits(kv_delimiter, 1));
-    result[cols[0]] = cols[1];
+    if (cols.size() == 2) {
+      result[cols[0]] = cols[1];
+    } else if (cols.size() == 1) {
+      result[cols[0]] = "";
+    }
   }
 
   return result;
+}
+
+std::string JoinKVStr(const std::map<std::string, std::string>& data,
+                      const std::string& kv_delimiter,
+                      const std::string& entry_delimiter) {
+  std::stringstream ss;
+  bool first = true;
+  for (const auto& [key, value] : data) {
+    if (!first) {
+      ss << entry_delimiter;
+    }
+    first = false;
+    ss << key << kv_delimiter << value;
+  }
+  return ss.str();
 }
 
 RtspMessage RtspMessage::Parse(const std::string& content) {
