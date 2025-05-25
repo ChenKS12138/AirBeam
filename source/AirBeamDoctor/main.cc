@@ -1,6 +1,8 @@
+#include <atomic>
 #include <fstream>
 #include <ios>
 #include <iostream>
+#include <latch>
 #include <thread>
 
 #include "raop/codec.h"
@@ -30,6 +32,8 @@ int main() {
     return 1;
   }
 
+  std::atomic<bool> write_done = false;
+
   std::thread worker_thread([&]() {
     char chunk[1024];
     while (ifs.read(chunk, sizeof(chunk)) || ifs.gcount() > 0) {
@@ -43,16 +47,17 @@ int main() {
     }
 
     ifs.close();
+    write_done.store(true);
   });
-
   worker_thread.detach();
 
   RtpAudioPacketChunk chunk, encoded;
-  while (true) {
+  while (!write_done || !fifo.Empty()) {
     size_t size = fifo.Read(chunk.data_, sizeof(chunk.data_));
     chunk.len_ = size;
     PCMCodec::Encode(chunk, encoded);
     encoded.len_ = chunk.len_;
+    raop.AcceptFrame();
     raop.SendChunk(encoded);
   }
 
