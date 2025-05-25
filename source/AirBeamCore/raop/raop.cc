@@ -125,16 +125,10 @@ void Raop::GenerateID() {
 void Raop::Announce() {
   std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
 
-  NetAddr local_netaddr;
-  int ret = rtsp_client_.GetLocalNetAddr(local_netaddr);
-  if (ret != kOk) {
-    exit(-1);
-    return;
-  }
-
   std::vector<std::tuple<std::string, std::string>> sdp_map = {
       {"v", "0"},
-      {"o", fmt::format("iTunes {} 0 IN IP4 {}", sid_, local_netaddr.ip_)},
+      {"o", fmt::format("iTunes {} 0 IN IP4 {}", sid_,
+                        rtsp_client_.GetLocalNetAddr().ip_)},
       {"s", "iTunes"},
       {"c", fmt::format("IN IP4 {}", rtsp_ip_addr_)},
       {"t", "0 0"},
@@ -154,7 +148,7 @@ void Raop::Announce() {
           .SetBody(sdp)
           .Build();
   RtspRespMessage response;
-  ret = rtsp_client_.DoRequest(request, response);
+  int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
@@ -280,14 +274,7 @@ void Raop::Setup() {
     return;
   }
 
-  NetAddr rtsp_remote_addr;
-  ret = rtsp_client_.GetRemoteNetAddr(rtsp_remote_addr);
-  if (ret != kOk) {
-    exit(-1);
-    return;
-  }
-
-  remote_audio_addr_.ip_ = rtsp_remote_addr.ip_;
+  remote_audio_addr_.ip_ = rtsp_client_.GetRemoteNetAddr().ip_;
 }
 
 void Raop::Record() {

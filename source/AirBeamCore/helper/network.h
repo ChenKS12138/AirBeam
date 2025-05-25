@@ -24,14 +24,14 @@ class TCPClient {
   ErrCode Connect(const std::string& ip, int port);
   ErrCode Write(const std::string& data);
   ErrCode Read(std::string& data);
-  ErrCode GetLocalNetAddr(NetAddr& addr);
-  ErrCode GetRemoteNetAddr(NetAddr& addr);
+  const NetAddr& GetLocalNetAddr() { return local_addr_; };
+  const NetAddr& GetRemoteNetAddr() { return remote_addr_; }
   void Close();
 
  private:
   int sockfd_ = -1;
-  struct sockaddr_in remote_addr_ {};
-  struct sockaddr_in local_addr_ {};
+  NetAddr remote_addr_;
+  NetAddr local_addr_;
 };
 
 class UDPServer {
@@ -42,12 +42,12 @@ class UDPServer {
   ErrCode Bind();
   ErrCode Write(const NetAddr& remote_addr, const std::string& data);
   ErrCode Read(NetAddr& remote_addr, std::string& data);
-  ErrCode GetLocalNetAddr(NetAddr& addr);
+  const NetAddr& GetLocalNetAddr() { return local_addr_; };
   void Close();
 
  private:
   int sockfd_ = -1;
-  struct sockaddr_in local_addr_ {};
+  NetAddr local_addr_;
 };
 
 }  // namespace helper

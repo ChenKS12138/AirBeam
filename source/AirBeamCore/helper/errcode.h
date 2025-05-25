@@ -6,29 +6,23 @@
 
 namespace AirBeamCore {
 namespace helper {
-// common: 0x0000_0000 ~ 0x0000_0FFF
-// TCP:  0x0001_0000 ~ 0x0001_FFFF
-// UDP:  0x0002_0000 ~ 0x0002_FFFF
-
-#define ERR_CODE_GEN(base, name, val) name = ((base) + (val))
-
 enum ErrCode : uint64_t {
   kOk = 0,
   // common
-  ERR_CODE_GEN(0x00000000, kErrUnknown, 1),
-  ERR_CODE_GEN(0x00000000, kErrInvalidParam, 2),
+  kErrUnknown = 1,
+  kErrInvalidParam = 2,
   // TCP
-  ERR_CODE_GEN(0x00010000, kErrTcpSocketCreate, 1),
-  ERR_CODE_GEN(0x00010000, kErrTcpAddrParse, 2),
-  ERR_CODE_GEN(0x00010000, kErrTcpConnect, 3),
-  ERR_CODE_GEN(0x00010000, kErrTcpSend, 4),
-  ERR_CODE_GEN(0x00010000, kErrTcpRecv, 5),
+  kErrTcpSocketCreate = 65537,
+  kErrTcpAddrParse = 65538,
+  kErrTcpConnect = 65539,
+  kErrTcpSend = 65540,
+  kErrTcpRecv = 65541,
   // UDP
-  ERR_CODE_GEN(0x00020000, kErrUdpSocketCreate, 1),
-  ERR_CODE_GEN(0x00020000, kErrUdpBind, 2),
-  ERR_CODE_GEN(0x00020000, kErrUdpAddrParse, 3),
-  ERR_CODE_GEN(0x00020000, kErrUdpSend, 4),
-  ERR_CODE_GEN(0x00020000, kErrUdpRecv, 5),
+  kErrUdpSocketCreate = 131073,
+  kErrUdpBind = 131074,
+  kErrUdpAddrParse = 131075,
+  kErrUdpSend = 131076,
+  kErrUdpRecv = 131077,
 };
 }  // namespace helper
 }  // namespace AirBeamCore

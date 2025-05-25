@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "errcode.h"
+#include "helper/logger.h"
 
 namespace AirBeamCore {
 namespace helper {
@@ -26,15 +27,28 @@ ErrCode TCPClient::Connect(const std::string& ip, int port) {
   if (sockfd_ != -1) Close();
   sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd_ < 0) return kErrTcpSocketCreate;
-  memset(&remote_addr_, 0, sizeof(remote_addr_));
-  remote_addr_.sin_family = AF_INET;
-  remote_addr_.sin_port = htons(port);
-  if (inet_pton(AF_INET, ip.c_str(), &remote_addr_.sin_addr) <= 0)
+
+  struct sockaddr_in remote_addr {};
+  struct sockaddr_in local_addr {};
+
+  memset(&remote_addr, 0, sizeof(remote_addr));
+  remote_addr.sin_family = AF_INET;
+  remote_addr.sin_port = htons(port);
+  if (inet_pton(AF_INET, ip.c_str(), &remote_addr.sin_addr) <= 0)
     return kErrTcpAddrParse;
-  if (connect(sockfd_, (sockaddr*)&remote_addr_, sizeof(remote_addr_)) < 0)
+  if (connect(sockfd_, (sockaddr*)&remote_addr, sizeof(remote_addr)) < 0)
     return kErrTcpConnect;
-  socklen_t len = sizeof(local_addr_);
-  getsockname(sockfd_, (sockaddr*)&local_addr_, &len);
+  socklen_t len = sizeof(local_addr);
+  getsockname(sockfd_, (sockaddr*)&local_addr, &len);
+
+  char ipaddr[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &local_addr.sin_addr, ipaddr, sizeof(ipaddr));
+
+  remote_addr_.ip_ = ip;
+  remote_addr_.port_ = ntohs(remote_addr.sin_port);
+
+  local_addr_.ip_ = ipaddr;
+  local_addr_.port_ = ntohs(local_addr.sin_port);
   return kOk;
 }
 
@@ -53,24 +67,6 @@ ErrCode TCPClient::Read(std::string& data) {
   return kOk;
 }
 
-ErrCode TCPClient::GetLocalNetAddr(NetAddr& addr) {
-  if (sockfd_ < 0) return kErrTcpSocketCreate;
-  char ip[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &local_addr_.sin_addr, ip, sizeof(ip));
-  addr.ip_ = ip;
-  addr.port_ = ntohs(local_addr_.sin_port);
-  return kOk;
-}
-
-ErrCode TCPClient::GetRemoteNetAddr(NetAddr& addr) {
-  if (sockfd_ < 0) return kErrTcpSocketCreate;
-  char ip[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &remote_addr_.sin_addr, ip, sizeof(ip));
-  addr.ip_ = ip;
-  addr.port_ = ntohs(remote_addr_.sin_port);
-  return kOk;
-}
-
 void TCPClient::Close() {
   if (sockfd_ != -1) {
     close(sockfd_);
@@ -85,12 +81,20 @@ ErrCode UDPServer::Bind() {
   if (sockfd_ != -1) Close();
   sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd_ < 0) return kErrUdpSocketCreate;
-  memset(&local_addr_, 0, sizeof(local_addr_));
-  local_addr_.sin_family = AF_INET;
-  local_addr_.sin_addr.s_addr = htonl(INADDR_ANY);
-  local_addr_.sin_port = htons(0);  // random
-  if (bind(sockfd_, (sockaddr*)&local_addr_, sizeof(local_addr_)) < 0)
+  struct sockaddr_in local_addr {};
+  memset(&local_addr, 0, sizeof(local_addr));
+  local_addr.sin_family = AF_INET;
+  local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  local_addr.sin_port = htons(0);  // random
+  if (bind(sockfd_, (sockaddr*)&local_addr, sizeof(local_addr)) < 0)
     return kErrUdpBind;
+
+  char ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &local_addr.sin_addr, ip, sizeof(ip));
+
+  local_addr_.ip_ = ip;
+  local_addr_.port_ = ntohs(local_addr.sin_port);
+
   return kOk;
 }
 
@@ -118,14 +122,6 @@ ErrCode UDPServer::Read(NetAddr& remote_addr, std::string& data) {
   inet_ntop(AF_INET, &src.sin_addr, ipbuf, sizeof(ipbuf));
   remote_addr.ip_ = ipbuf;
   remote_addr.port_ = ntohs(src.sin_port);
-  return kOk;
-}
-ErrCode UDPServer::GetLocalNetAddr(NetAddr& addr) {
-  if (sockfd_ < 0) return kErrUdpSocketCreate;
-  char ip[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &local_addr_.sin_addr, ip, sizeof(ip));
-  addr.ip_ = ip;
-  addr.port_ = ntohs(local_addr_.sin_port);
   return kOk;
 }
 
