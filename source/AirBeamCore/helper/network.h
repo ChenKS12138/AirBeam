@@ -19,7 +19,7 @@ struct NetAddr {
 class TCPClient {
  public:
   TCPClient();
-  ~TCPClient();
+  virtual ~TCPClient();
 
   ErrCode Connect(const std::string& ip, int port);
   ErrCode Write(const std::string& data);
@@ -37,7 +37,7 @@ class TCPClient {
 class UDPServer {
  public:
   UDPServer();
-  ~UDPServer();
+  virtual ~UDPServer();
 
   ErrCode Bind();
   ErrCode Write(const std::string& data, const std::string& ip, int port);

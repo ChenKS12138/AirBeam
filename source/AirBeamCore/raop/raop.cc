@@ -94,7 +94,8 @@ void Raop::SetVolume(uint8_t volume_percent) {
   Volume volume = Volume::FromPercent(volume_percent);
   std::string body = fmt::format("volume: {}\r\n", volume.GetValue());
   std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
-  std::string request =
+
+  auto request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("SET_PARAMETER")
           .SetUri(uri)
@@ -105,16 +106,9 @@ void Raop::SetVolume(uint8_t volume_percent) {
           .AddHeader("Client-Instance", sci_)
           .AddHeader("Session", "1")
           .SetBody(body)
-          .Build()
-          .ToString();
-
-  int ret = rtsp_client_.Write(request);
-  if (ret != kOk) {
-    exit(-1);
-    return;
-  }
-  std::string buffer;
-  ret = rtsp_client_.Read(buffer);
+          .Build();
+  RtspRespMessage response;
+  int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
@@ -140,7 +134,8 @@ void Raop::Announce() {
       {"m", "audio 0 RTP/AVP 96"},
       {"a", "rtpmap:96 L16/44100/2"}};
   std::string sdp = JoinKVStrOrdered(sdp_map, "=", "\r\n") + "\r\n";
-  std::string request =
+
+  auto request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("ANNOUNCE")
           .SetUri(uri)
@@ -150,15 +145,9 @@ void Raop::Announce() {
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
           .AddHeader("Client-Instance", sci_)
           .SetBody(sdp)
-          .Build()
-          .ToString();
-  int ret = rtsp_client_.Write(request);
-  if (ret != kOk) {
-    exit(-1);
-    return;
-  }
-  std::string buffer;
-  ret = rtsp_client_.Read(buffer);
+          .Build();
+  RtspRespMessage response;
+  int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
@@ -268,7 +257,8 @@ void Raop::Setup() {
   };
   std::string transport =
       "RTP/AVP/UDP;unicast;" + JoinKVStrOrdered(transport_params, "=", ";");
-  std::string request =
+
+  auto request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("SETUP")
           .SetUri(uri)
@@ -276,21 +266,15 @@ void Raop::Setup() {
           .AddHeader("CSeq", "2")
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
           .AddHeader("Client-Instance", sci_)
-          .Build()
-          .ToString();
-  int ret = rtsp_client_.Write(request);
-  if (ret < 0) {
-    exit(-1);
-    return;
-  }
-  std::string buffer;
-  ret = rtsp_client_.Read(buffer);
+          .Build();
+  RtspRespMessage response;
+  int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
   }
-  auto resp = RtspMessage::Parse({buffer.c_str(), buffer.size()});
-  auto transport_map = ParseKVStr(resp.GetHeader("Transport"), "=", ";");
+
+  auto transport_map = ParseKVStr(response.GetHeader("Transport"), "=", ";");
   if (!absl::SimpleAtoi(transport_map["server_port"], &remote_audio_port_)) {
     exit(-1);
     return;
@@ -316,7 +300,7 @@ void Raop::Record() {
       {"rtptime", std::to_string(start_ts)},
   };
   std::string rtp_info = JoinKVStrOrdered(rtp_info_map, "=", ";");
-  std::string request =
+  auto request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("RECORD")
           .SetUri(uri)
@@ -328,22 +312,16 @@ void Raop::Record() {
           // TODO(cattchen) remove hard code ci
           .AddHeader("Client-Instance", "8fae761ff0c7c827")
           .AddHeader("Session", "1")
-          .Build()
-          .ToString();
-  int ret = rtsp_client_.Write(request);
-  if (ret < 0) {
-    exit(-1);
-    return;
-  }
-  std::string buffer;
-  ret = rtsp_client_.Read(buffer);
+          .Build();
+
+  RtspRespMessage response;
+  int ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
   }
-  auto resp = RtspMessage::Parse({buffer.c_str(), buffer.size()});
-  resp.GetHeader("Audio-Latency");
-  if (!absl::SimpleAtoi(resp.GetHeader("Audio-Latency"), &latency_)) {
+  response.GetHeader("Audio-Latency");
+  if (!absl::SimpleAtoi(response.GetHeader("Audio-Latency"), &latency_)) {
     exit(-1);
     return;
   }
@@ -390,7 +368,7 @@ void Raop::KeepAlive() {
   (new std::thread([this]() {
     while (true) {
       std::this_thread::sleep_for(std::chrono::seconds(5));
-      std::string request =
+      auto request =
           AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
               .SetMethod("OPTIONS")
               .SetUri("*")
@@ -399,15 +377,9 @@ void Raop::KeepAlive() {
               .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
               .AddHeader("Client-Instance", sci_)
               .AddHeader("Session", "1")
-              .Build()
-              .ToString();
-      int ret = rtsp_client_.Write(request);
-      if (ret != kOk) {
-        exit(-1);
-        return;
-      }
-      std::string buffer;
-      ret = rtsp_client_.Read(buffer);
+              .Build();
+      RtspRespMessage response;
+      int ret = rtsp_client_.DoRequest(request, response);
       if (ret != kOk) {
         exit(-1);
         return;

@@ -10,6 +10,7 @@
 #include "helper/network.h"
 #include "helper/random.h"
 #include "raop/rtp.h"
+#include "raop/rtsp_client.h"
 
 namespace AirBeamCore {
 namespace raop {
@@ -26,7 +27,7 @@ class Raop {
       : rtsp_ip_addr_(rtsp_ip_addr), rtsp_port_(7000) {}
 
  private:
-  helper::TCPClient rtsp_client_;
+  raop::RTSPClient rtsp_client_;
 
   std::string sid_;
   std::string sci_;
