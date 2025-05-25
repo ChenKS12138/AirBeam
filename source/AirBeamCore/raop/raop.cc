@@ -10,12 +10,14 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 #include <thread>
 
 #include "absl/strings/numbers.h"
 #include "constants.h"
 #include "fmt/core.h"
 #include "helper/errcode.h"
+#include "helper/network.h"
 #include "helper/random.h"
 #include "rtp.h"
 #include "rtsp.h"
@@ -101,7 +103,7 @@ void Raop::SetVolume(uint8_t volume_percent) {
           .SetUri(uri)
           .AddHeader("Content-Type", "text/parameters")
           .AddHeader("Content-Length", std::to_string(body.size()))
-          .AddHeader("CSeq", std::to_string(status_.seq_number))
+          .AddHeader("CSeq", std::to_string(status_.seq_number++))
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
           .AddHeader("Client-Instance", sci_)
           .AddHeader("Session", "1")
@@ -124,10 +126,17 @@ void Raop::GenerateID() {
 
 void Raop::Announce() {
   std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
-  // TODO (cattchen) remove hardcode ip
+
+  NetAddr local_netaddr;
+  int ret = rtsp_client_.GetLocalNetAddr(local_netaddr);
+  if (ret != kOk) {
+    exit(-1);
+    return;
+  }
+
   std::vector<std::tuple<std::string, std::string>> sdp_map = {
       {"v", "0"},
-      {"o", fmt::format("iTunes {} 0 IN IP4 192.168.123.157", sid_)},
+      {"o", fmt::format("iTunes {} 0 IN IP4 {}", sid_, local_netaddr.ip_)},
       {"s", "iTunes"},
       {"c", fmt::format("IN IP4 {}", rtsp_ip_addr_)},
       {"t", "0 0"},
@@ -141,13 +150,13 @@ void Raop::Announce() {
           .SetUri(uri)
           .AddHeader("Content-Type", "application/sdp")
           .AddHeader("Content-Length", std::to_string(sdp.size()))
-          .AddHeader("CSeq", "1")
+          .AddHeader("CSeq", std::to_string(status_.seq_number++))
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
           .AddHeader("Client-Instance", sci_)
           .SetBody(sdp)
           .Build();
   RtspRespMessage response;
-  int ret = rtsp_client_.DoRequest(request, response);
+  ret = rtsp_client_.DoRequest(request, response);
   if (ret != kOk) {
     exit(-1);
     return;
@@ -263,7 +272,7 @@ void Raop::Setup() {
           .SetMethod("SETUP")
           .SetUri(uri)
           .AddHeader("Transport", transport)
-          .AddHeader("CSeq", "2")
+          .AddHeader("CSeq", std::to_string(status_.seq_number++))
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
           .AddHeader("Client-Instance", sci_)
           .Build();
@@ -290,10 +299,9 @@ void Raop::Setup() {
 }
 
 void Raop::Record() {
-  uint64_t start_seq = status_.seq_number + 1;
+  uint64_t start_seq = status_.seq_number++;
   uint64_t start_ts = NtpTime::Now().IntoTimestamp(kSampleRate44100);
-  // TODO(catchen) remove hard code sid
-  std::string uri = fmt::format("rtsp://{}/0812982985", rtsp_ip_addr_);
+  std::string uri = fmt::format("rtsp://{}/{}", rtsp_ip_addr_, sid_);
   std::string range = "npt=0-";
   std::vector<std::tuple<std::string, std::string>> rtp_info_map = {
       {"seq", std::to_string(start_seq)},
@@ -306,11 +314,9 @@ void Raop::Record() {
           .SetUri(uri)
           .AddHeader("Range", range)
           .AddHeader("RTP-Info", rtp_info)
-          // TODO(cattchen) remove hard code cseq
-          .AddHeader("CSeq", "3")
+          .AddHeader("CSeq", std::to_string(start_seq))
           .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
-          // TODO(cattchen) remove hard code ci
-          .AddHeader("Client-Instance", "8fae761ff0c7c827")
+          .AddHeader("Client-Instance", sci_)
           .AddHeader("Session", "1")
           .Build();
 
@@ -372,8 +378,7 @@ void Raop::KeepAlive() {
           AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
               .SetMethod("OPTIONS")
               .SetUri("*")
-              // TODO(cattchen) remove hard code cseq
-              .AddHeader("CSeq", "5")
+              .AddHeader("CSeq", std::to_string(status_.seq_number++))
               .AddHeader("User-Agent", "iTunes/7.6.2 (Windows; N;)")
               .AddHeader("Client-Instance", sci_)
               .AddHeader("Session", "1")

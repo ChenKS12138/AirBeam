@@ -2,6 +2,8 @@
 
 #include "rtsp_client.h"
 
+#include <mutex>
+
 #include "helper/errcode.h"
 #include "helper/network.h"
 #include "raop/rtsp.h"
@@ -10,6 +12,8 @@ namespace AirBeamCore {
 namespace raop {
 int RTSPClient::DoRequest(const RtspReqMessage& request,
                           RtspRespMessage& response) {
+  std::lock_guard guard(mtx_);
+
   int ret = helper::TCPClient::Write(request.ToString());
   if (ret < 0) {
     return ret;

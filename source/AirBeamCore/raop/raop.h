@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#include <atomic>
 #include <string>
 
 #include "helper/network.h"
@@ -16,7 +17,8 @@ namespace AirBeamCore {
 namespace raop {
 struct RaopStatus {
  public:
-  uint16_t seq_number = helper::RandomGenerator::GetInstance().GenU64();
+  std::atomic<uint16_t> seq_number =
+      std::atomic<uint16_t>(helper::RandomGenerator::GetInstance().GenU64());
   uint64_t head_ts = 0;
   uint64_t first_ts = 0;
 };
