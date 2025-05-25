@@ -50,7 +50,46 @@ TEST(JoinKVStrTest, CustomDelimiter) {
   EXPECT_EQ(result, "k1=val1|k2=val2");
 }
 
-// RtspMessage 测试
+TEST(JoinKVStrOrdered, Basic) {
+  std::vector<std::tuple<std::string, std::string>> data = {
+      {"CSeq", "1"}, {"Content-Type", "application/sdp"}, {"Session", "12345"}};
+  std::string result = JoinKVStrOrdered(data, ":", "\r\n");
+  EXPECT_EQ(result, "CSeq:1\r\nContent-Type:application/sdp\r\nSession:12345");
+}
+
+TEST(JoinKVStrOrdered, DifferentOrder) {
+  std::vector<std::tuple<std::string, std::string>> data = {
+      {"Session", "12345"}, {"CSeq", "1"}, {"Content-Type", "application/sdp"}};
+  std::string result = JoinKVStrOrdered(data, ":", "\r\n");
+  EXPECT_EQ(result, "Session:12345\r\nCSeq:1\r\nContent-Type:application/sdp");
+}
+
+TEST(JoinKVStrOrdered, WithEmptyValue) {
+  std::vector<std::tuple<std::string, std::string>> data = {
+      {"CSeq", "1"}, {"Content-Type", ""}, {"Session", "12345"}};
+  std::string result = JoinKVStrOrdered(data, ":", "\r\n");
+  EXPECT_EQ(result, "CSeq:1\r\nContent-Type:\r\nSession:12345");
+}
+
+TEST(JoinKVStrOrdered, Empty) {
+  std::vector<std::tuple<std::string, std::string>> data = {};
+  std::string result = JoinKVStrOrdered(data, ":", "\r\n");
+  EXPECT_EQ(result, "");
+}
+
+TEST(JoinKVStrOrdered, Single) {
+  std::vector<std::tuple<std::string, std::string>> data = {{"CSeq", "1"}};
+  std::string result = JoinKVStrOrdered(data, ":", "\r\n");
+  EXPECT_EQ(result, "CSeq:1");
+}
+
+TEST(JoinKVStrOrdered, CustomDelimiters) {
+  std::vector<std::tuple<std::string, std::string>> data = {{"key1", "value1"},
+                                                            {"key2", "value2"}};
+  std::string result = JoinKVStrOrdered(data, "=", ";");
+  EXPECT_EQ(result, "key1=value1;key2=value2");
+}
+
 TEST(RtspMessageTest, ParseBasic) {
   std::string content =
       "OPTIONS rtsp://example.com/media.mp4 RTSP/1.0\r\n"

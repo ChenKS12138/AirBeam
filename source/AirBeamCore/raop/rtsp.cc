@@ -43,6 +43,21 @@ std::string JoinKVStr(const std::map<std::string, std::string>& data,
   return ss.str();
 }
 
+std::string JoinKVStrOrdered(
+    const std::vector<std::tuple<std::string, std::string>>& data,
+    const std::string& kv_delimiter, const std::string& entry_delimiter) {
+  std::stringstream ss;
+  bool first = true;
+  for (const auto& entry : data) {
+    if (!first) {
+      ss << entry_delimiter;
+    }
+    first = false;
+    ss << std::get<0>(entry) << kv_delimiter << std::get<1>(entry);
+  }
+  return ss.str();
+}
+
 RtspMessage RtspMessage::Parse(const std::string& content) {
   RtspMessage msg;
 

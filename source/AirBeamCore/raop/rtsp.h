@@ -17,6 +17,10 @@ std::string JoinKVStr(const std::map<std::string, std::string>& data,
                       const std::string& kv_delimiter,
                       const std::string& entry_delimiter);
 
+std::string JoinKVStrOrdered(
+    const std::vector<std::tuple<std::string, std::string>>& data,
+    const std::string& kv_delimiter, const std::string& entry_delimiter);
+
 class RtspMessage {
  public:
   static RtspMessage Parse(const std::string& content);

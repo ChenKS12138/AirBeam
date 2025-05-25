@@ -10,7 +10,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
-#include <random>
 #include <thread>
 
 #include "absl/strings/numbers.h"
@@ -37,6 +36,7 @@ void Raop::Start() {
     close(sockfd_);
     return;
   }
+
   GenerateID();
   Announce();
   BindCtrlAndTimePort();
@@ -135,12 +135,16 @@ void Raop::GenerateID() {
 
 void Raop::Announce() {
   std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
-  // TODO (cattchen) remove hardcode sid
   // TODO (cattchen) remove hardcode ip
-  std::string sdp = fmt::format(
-      "v=0\r\no=iTunes {} 0 IN IP4 192.168.123.157\r\ns=iTunes\r\nc=IN "
-      "IP4 {}\r\nt=0 0\r\nm=audio 0 RTP/AVP 96\r\na=rtpmap:96 L16/44100/2\r\n",
-      sid_, raop_ip_addr_);
+  std::vector<std::tuple<std::string, std::string>> sdp_map = {
+      {"v", "0"},
+      {"o", fmt::format("iTunes {} 0 IN IP4 192.168.123.157", sid_)},
+      {"s", "iTunes"},
+      {"c", fmt::format("IN IP4 {}", raop_ip_addr_)},
+      {"t", "0 0"},
+      {"m", "audio 0 RTP/AVP 96"},
+      {"a", "rtpmap:96 L16/44100/2"}};
+  std::string sdp = JoinKVStrOrdered(sdp_map, "=", "\r\n") + "\r\n";
   std::string request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("ANNOUNCE")
@@ -262,10 +266,14 @@ void Raop::BindCtrlAndTimePort() {
 
 void Raop::Setup() {
   std::string uri = fmt::format("rtsp://{}/{}", raop_ip_addr_, sid_);
-  std::string transport = fmt::format(
-      "RTP/AVP/"
-      "UDP;unicast;interleaved=0-1;mode=record;control_port={};timing_port={}",
-      ctrl_port_, time_port_);
+  std::vector<std::tuple<std::string, std::string>> transport_params = {
+      {"interleaved", "0-1"},
+      {"mode", "record"},
+      {"control_port", std::to_string(ctrl_port_)},
+      {"timing_port", std::to_string(time_port_)},
+  };
+  std::string transport =
+      "RTP/AVP/UDP;unicast;" + JoinKVStrOrdered(transport_params, "=", ";");
   std::string request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("SETUP")
@@ -310,7 +318,11 @@ void Raop::Record() {
   // TODO(catchen) remove hard code sid
   std::string uri = fmt::format("rtsp://{}/0812982985", raop_ip_addr_);
   std::string range = "npt=0-";
-  std::string rtp_info = fmt::format("seq={};rtptime={}", start_seq, start_ts);
+  std::vector<std::tuple<std::string, std::string>> rtp_info_map = {
+      {"seq", std::to_string(start_seq)},
+      {"rtptime", std::to_string(start_ts)},
+  };
+  std::string rtp_info = JoinKVStrOrdered(rtp_info_map, "=", ";");
   std::string request =
       AirBeamCore::raop::RtspMsgBuilder<AirBeamCore::raop::RtspReqMessage>()
           .SetMethod("RECORD")
