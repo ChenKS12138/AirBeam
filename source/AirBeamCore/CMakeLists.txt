@@ -1,5 +1,10 @@
 SET(AIRBEAM_CORE_TARGET AirBeamCore)
 
+option(BUILD_DEBUG "Enable debug build" OFF)
+if(BUILD_DEBUG)
+  add_definitions(-DBUILD_DEBUG)
+endif()
+
 file(
   GLOB_RECURSE
   AIRBEAM_CORE_FILES

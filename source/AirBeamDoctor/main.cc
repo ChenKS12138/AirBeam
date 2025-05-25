@@ -3,6 +3,8 @@
 #include <iostream>
 #include <thread>
 
+#include "raop/codec.h"
+#include "raop/fifo.h"
 #include "raop/raop.h"
 
 using namespace AirBeamCore::raop;
@@ -12,32 +14,46 @@ int main() {
 
   Raop raop("192.168.123.109");
   raop.Start();
+  raop.SetVolume(30);
 
+  std::cout << "Connected" << std::endl;
+
+  constexpr size_t kFiFOCapacity = 5 * 1024 * 1024;  // 30MB buffer
+
+  ConcurrentByteFIFO fifo(kFiFOCapacity);
   std::ifstream ifs(
       "/Users/cattchen/Codes/github.com/ChenKS12138/AirBeam/images/audio.pcm",
       std::ios::binary);
 
-  if (ifs.is_open()) {
-    ifs.seekg(0, std::ios::end);
-    size_t length = ifs.tellg();
-    ifs.seekg(0, std::ios::beg);
+  if (!ifs.is_open()) {
+    std::cerr << "Failed to open file." << std::endl;
+    return 1;
+  }
 
-    char* buffer = new char[length];
-
-    std::cout << "Reading " << length << " characters... " << std::endl;
-    ifs.read(buffer, length);
-
-    if (ifs) {
-      std::cout << "all characters read successfully." << std::endl;
-    } else {
-      std::cout << "error: only " << ifs.gcount() << " could be read";
+  std::thread worker_thread([&]() {
+    char chunk[1024];
+    while (ifs.read(chunk, sizeof(chunk)) || ifs.gcount() > 0) {
+      fifo.Write(reinterpret_cast<uint8_t*>(chunk), ifs.gcount());
     }
-    ifs.close();
 
-    // TODO: Send buffer to raop
-    delete[] buffer;
-  } else {
-    std::cout << "Unable to open file";
+    if (ifs.eof()) {
+      std::cout << "Finished reading file." << std::endl;
+    } else if (ifs.fail()) {
+      std::cerr << "Error reading file." << std::endl;
+    }
+
+    ifs.close();
+  });
+
+  worker_thread.detach();
+
+  RtpAudioPacketChunk chunk, encoded;
+  while (true) {
+    size_t size = fifo.Read(chunk.data_, sizeof(chunk.data_));
+    chunk.len_ = size;
+    PCMCodec::Encode(chunk, encoded);
+    encoded.len_ = chunk.len_;
+    raop.SendChunk(encoded);
   }
 
   return 0;
