@@ -13,7 +13,9 @@
 #include <string>
 #include <thread>
 
-#include "logger.hpp"
+#include "helper/logger.hpp"
+
+using namespace AirBeamCore::helper;
 
 class BonjourBrowser {
  public:

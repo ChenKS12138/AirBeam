@@ -20,14 +20,18 @@
 #include "aspl/Device.hpp"
 #include "aspl/IORequestHandler.hpp"
 #include "aspl/Plugin.hpp"
-#include "helper/bonjour_browser.hpp"
+#include "bonjour_browser.hpp"
 #include "helper/logger.hpp"
-#include "helper/volume_observer.hpp"
 #include "raop/codec.h"
 #include "raop/fifo.h"
 #include "raop/raop.h"
+#include "volume_observer.hpp"
 
 namespace {
+
+using namespace AirBeamCore::raop;
+using namespace AirBeamCore::helper;
+
 constexpr UInt32 SampleRate = 44100;
 constexpr UInt32 ChannelCount = 2;
 
@@ -37,7 +41,7 @@ class RaopHandler : public aspl::ControlRequestHandler,
                     public aspl::IORequestHandler {
  public:
   explicit RaopHandler(aspl::Device& device, const std::string& ip)
-      : raop_(std::make_shared<AirBeamCore::raop::Raop>(ip)),
+      : raop_(std::make_shared<Raop>(ip)),
         fifo_(kFiFOCapacity),
         device_(device) {
     auto volume_control =
@@ -63,8 +67,8 @@ class RaopHandler : public aspl::ControlRequestHandler,
   std::unique_ptr<VolumeObserver> volume_observer_ = nullptr;
 
  private:
-  std::shared_ptr<AirBeamCore::raop::Raop> raop_;
-  AirBeamCore::raop::ConcurrentByteFIFO fifo_;
+  std::shared_ptr<Raop> raop_;
+  ConcurrentByteFIFO fifo_;
   aspl::Device& device_;
 
   std::unique_ptr<std::thread> consumer_thread_;
@@ -77,14 +81,14 @@ class RaopHandler : public aspl::ControlRequestHandler,
     raop_->Start();
     consumer_thread_ = std::make_unique<std::thread>([&]() {
       while (true) {
-        AirBeamCore::raop::RtpAudioPacketChunk chunk, encoded;
+        RtpAudioPacketChunk chunk, encoded;
         size_t read_cnt = fifo_.Read(chunk.data_, sizeof(chunk.data_));
         chunk.len_ = read_cnt;
         if (read_cnt == 0) {
           continue;
         }
 
-        AirBeamCore::raop::PCMCodec::Encode(chunk, encoded);
+        PCMCodec::Encode(chunk, encoded);
         encoded.len_ = chunk.len_;
 
         raop_->AcceptFrame();

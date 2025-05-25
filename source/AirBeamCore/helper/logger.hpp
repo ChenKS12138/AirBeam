@@ -8,6 +8,8 @@
 
 #include <string>
 
+namespace AirBeamCore {
+namespace helper {
 #ifdef BUILD_DEBUG
 #warning message("Building in debug mode")
 inline void ABDebugLog(const char* format, ...) {
@@ -20,5 +22,6 @@ inline void ABDebugLog(const char* format, ...) {
 
 #else
 inline void ABDebugLog(const char* format, ...) {}
-
 #endif
+}  // namespace helper
+}  // namespace AirBeamCore
