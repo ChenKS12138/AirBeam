@@ -14,8 +14,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamCore")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamCoreTest")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamDoctor")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamASP")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeam")
+
 
 # For generate compile_commands.json
 add_custom_target(
