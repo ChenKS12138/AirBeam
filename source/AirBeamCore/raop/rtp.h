@@ -6,8 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "constants.h"
+#include "raop/constants.h"
 
+namespace AirBeamCore {
+namespace raop {
 struct RtpHeader {
   uint8_t proto;
   uint8_t type;
@@ -87,3 +89,5 @@ struct Volume {
   explicit Volume(float value) : value_(value) {}
   float value_;
 };
+}  // namespace raop
+}  // namespace AirBeamCore

@@ -7,8 +7,10 @@
 
 #include <string>
 
-#include "rtp.h"
+#include "raop/rtp.h"
 
+namespace AirBeamCore {
+namespace raop {
 uint64_t generateRandomU64();
 
 struct RaopStatus {
@@ -73,3 +75,5 @@ class Raop {
   void KeepAlive();
   void FirstSendSync();
 };
+}  // namespace raop
+}  // namespace AirBeamCore

@@ -5,7 +5,8 @@
 #include <map>
 #include <string>
 
-// ParseKVStr 测试
+using namespace AirBeamCore::raop;
+
 TEST(ParseKVStrTest, Basic) {
   std::string content = "a:1;b:2;c:3";
   auto result = ParseKVStr(content, ":", ";");
@@ -18,7 +19,7 @@ TEST(ParseKVStrTest, Basic) {
 TEST(ParseKVStrTest, EmptyContent) {
   std::string content = "";
   auto result = ParseKVStr(content, ":", ";");
-  EXPECT_EQ(result.size(), 1);  // absl::StrSplit空字符串返回一个空字符串元素
+  EXPECT_EQ(result.size(), 1);
   EXPECT_EQ(result.begin()->first, "");
   EXPECT_EQ(result.begin()->second, "");
 }

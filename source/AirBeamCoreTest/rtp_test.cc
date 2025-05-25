@@ -5,6 +5,8 @@
 #include <cstring>
 #include <vector>
 
+using namespace AirBeamCore::raop;
+
 TEST(RtpHeaderTest, SerializeDeserialize) {
   RtpHeader header{0x80, 0x60, 0x1234};
   uint8_t buf[4] = {0};

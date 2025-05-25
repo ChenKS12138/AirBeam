@@ -11,6 +11,8 @@
 #include "constants.h"
 #include "fmt/core.h"
 
+namespace AirBeamCore {
+namespace raop {
 #ifdef SIMD_ARM
 #include <arm_neon.h>
 
@@ -225,3 +227,5 @@ Volume Volume::FromPercent(uint8_t percent) {
   }
   return Volume(kMaxVolume);
 }
+}  // namespace raop
+}  // namespace AirBeamCore

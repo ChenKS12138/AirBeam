@@ -2,9 +2,13 @@
 
 #include "codec.h"
 
+#include "raop/rtp.h"
+
 #ifdef SIMD_ARM
 #include <arm_neon.h>
 
+namespace AirBeamCore {
+namespace raop {
 void PCMCodec::Encode(const RtpAudioPacketChunk& input,
                       RtpAudioPacketChunk& output) {
   size_t len = input.len_;
@@ -27,9 +31,12 @@ void PCMCodec::Encode(const RtpAudioPacketChunk& input,
     out[offset + 3] = in[offset + 2];
   }
 }
+}  // namespace raop
+}  // namespace AirBeamCore
 
 #else
-
+namespace AirBeamCore {
+namespace raop {
 void PCMCodec::Encode(const RtpAudioPacketChunk& input,
                       RtpAudioPacketChunk& output) {
   size_t len = input.len_;
@@ -44,5 +51,7 @@ void PCMCodec::Encode(const RtpAudioPacketChunk& input,
     }
   }
 }
+}  // namespace raop
+}  // namespace AirBeamCore
 
 #endif

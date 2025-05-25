@@ -2,6 +2,8 @@
 
 #include "fifo.h"
 
+namespace AirBeamCore {
+namespace raop {
 size_t ConcurrentByteFIFO::Write(const uint8_t* data, size_t length) {
   size_t written = 0;
   while (written < length) {
@@ -34,3 +36,5 @@ bool ConcurrentByteFIFO::Full() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return size_ == capacity_;
 }
+}  // namespace raop
+}  // namespace AirBeamCore

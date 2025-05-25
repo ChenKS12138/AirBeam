@@ -2,10 +2,15 @@
 
 #pragma once
 
-#include "rtp.h"
+#include "raop/rtp.h"
 
+namespace AirBeamCore {
+
+namespace raop {
 class PCMCodec {
  public:
   static void Encode(const RtpAudioPacketChunk& input,
                      RtpAudioPacketChunk& output);
 };
+}  // namespace raop
+}  // namespace AirBeamCore

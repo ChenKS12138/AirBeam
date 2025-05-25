@@ -6,6 +6,8 @@
 #include <mutex>
 #include <vector>
 
+namespace AirBeamCore {
+namespace raop {
 class ConcurrentByteFIFO {
  public:
   explicit ConcurrentByteFIFO(size_t capacity)
@@ -33,3 +35,5 @@ class ConcurrentByteFIFO {
   std::condition_variable not_full_cv_;
   std::condition_variable not_empty_cv_;
 };
+}  // namespace raop
+}  // namespace AirBeamCore

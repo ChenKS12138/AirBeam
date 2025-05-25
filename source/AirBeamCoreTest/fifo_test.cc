@@ -6,6 +6,8 @@
 #include <thread>
 #include <vector>
 
+using namespace AirBeamCore::raop;
+
 TEST(ConcurrentByteFIFOTest, BasicWriteAndRead) {
   ConcurrentByteFIFO fifo(8);
 

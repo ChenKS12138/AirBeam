@@ -1,10 +1,13 @@
-#include "raop/codec.h"  // 包含 PCMCodec 和 RtpAudioPacketChunk
+#include "raop/codec.h"
 
 #include <gtest/gtest.h>
 
 #include <cstring>
 
 #include "gtest/gtest.h"
+#include "raop/rtp.h"
+
+using namespace AirBeamCore::raop;
 
 TEST(PCMCodecTest, EncodeSwapsBytesCorrectly) {
   PCMCodec codec;

@@ -6,6 +6,8 @@
 
 #include "absl/strings/str_split.h"
 
+namespace AirBeamCore {
+namespace raop {
 std::map<std::string, std::string> ParseKVStr(
     const std::string& content, const std::string& kv_delimiter,
     const std::string& entry_delimiter) {
@@ -72,3 +74,5 @@ std::string RtspMessage::ToString() const {
   ss << "body:" << std::endl << body_ << std::endl;
   return ss.str();
 }
+}  // namespace raop
+}  // namespace AirBeamCore

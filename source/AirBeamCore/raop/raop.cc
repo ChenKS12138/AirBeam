@@ -19,6 +19,9 @@
 #include "rtp.h"
 #include "rtsp.h"
 
+namespace AirBeamCore {
+
+namespace raop {
 uint64_t generateRandomU64() {
   std::random_device rd;
   std::mt19937_64 gen(rd());
@@ -413,3 +416,6 @@ void Raop::FirstSendSync() {
     return;
   }
 }
+}  // namespace raop
+
+}  // namespace AirBeamCore
