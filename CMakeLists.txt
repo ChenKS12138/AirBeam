@@ -12,6 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake)
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamCore")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeamASP")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/source/AirBeam")
 

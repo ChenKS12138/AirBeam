@@ -39,18 +39,14 @@ add_library(
 find_library(COREAUDIO_LIBRARY CoreAudio REQUIRED)
 
 set(ABSL_PROPAGATE_CXX_STD ON)
-CPMAddPackage("gh:abseil/abseil-cpp#20230125.3")
-CPMAddPackage("gh:fmtlib/fmt#7.1.3")
 CPMAddPackage("gh:gavv/libASPL#v3.1.1")
 
 target_link_libraries(
   ${DRIVER_NAME}
   libASPL
-  fmt
   ${COREAUDIO_LIBRARY}
 
-  absl::strings
-  absl::base
+  AirBeamCore
 )
 
 
