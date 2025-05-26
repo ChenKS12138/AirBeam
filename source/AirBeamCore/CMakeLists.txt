@@ -22,7 +22,7 @@ target_include_directories(
 )
 
 set(ABSL_PROPAGATE_CXX_STD ON)
-CPMAddPackage("gh:abseil/abseil-cpp#20230125.3")
+CPMAddPackage("gh:abseil/abseil-cpp#20250512.0")
 CPMAddPackage("gh:fmtlib/fmt#7.1.3")
 
 target_link_libraries(

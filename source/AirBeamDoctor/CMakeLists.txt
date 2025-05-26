@@ -17,9 +17,16 @@ target_include_directories(
 )
 
 set(ABSL_PROPAGATE_CXX_STD ON)
+CPMAddPackage("gh:abseil/abseil-cpp#20250512.0")
 
 target_link_libraries(
   ${AIRBEAM_DOCTOR_TARGET}
+
+  absl::flags
+  absl::flags_parse
+  absl::log
+  absl::log_initialize
+  absl::strings
 
   AirBeamCore
 )
