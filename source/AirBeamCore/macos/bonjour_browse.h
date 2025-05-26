@@ -14,7 +14,7 @@
 
 namespace AirBeamCore {
 namespace macos {
-class BonjourBrowser {
+class BonjourBrowse {
  public:
   enum class EventType {
     kServiceOnline = 1,
@@ -30,7 +30,7 @@ class BonjourBrowser {
 
  protected:
   struct ContextForAddr {
-    BonjourBrowser* browser;
+    BonjourBrowse* browser;
     std::string serviceName;
     std::string fullName;
     uint16_t port;
@@ -40,8 +40,8 @@ class BonjourBrowser {
   using ServiceFoundCallback =
       std::function<void(EventType, const ServiceInfo&)>;
 
-  BonjourBrowser();
-  ~BonjourBrowser();
+  BonjourBrowse();
+  ~BonjourBrowse();
 
   bool startBrowse(const std::string& serviceType,
                    ServiceFoundCallback callback);

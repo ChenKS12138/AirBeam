@@ -21,7 +21,7 @@
 #include "aspl/IORequestHandler.hpp"
 #include "aspl/Plugin.hpp"
 #include "helper/logger.h"
-#include "macos/bonjour_browser.h"
+#include "macos/bonjour_browse.h"
 #include "macos/volume_observer.h"
 #include "raop/codec.h"
 #include "raop/fifo.h"
@@ -131,7 +131,7 @@ class DriverHelper {
  protected:
   struct DeviceInfo {
     std::shared_ptr<aspl::Device> device_;
-    BonjourBrowser::ServiceInfo service_info_;
+    BonjourBrowse::ServiceInfo service_info_;
   };
 
  public:
@@ -143,7 +143,7 @@ class DriverHelper {
     static const std::string kServiceType = "_raop._tcp";
     using namespace std::placeholders;
     ABDebugLog("DriverHelper startBrowse %s", kServiceType.c_str());
-    browser_.startBrowse(
+    browse_.startBrowse(
         kServiceType,
         std::bind(&DriverHelper::HandleBrowseCallback, this, _1, _2));
   }
@@ -151,13 +151,13 @@ class DriverHelper {
   std::shared_ptr<aspl::Driver> GetDriver() { return driver_; }
 
  private:
-  void HandleBrowseCallback(BonjourBrowser::EventType event_type,
-                            const BonjourBrowser::ServiceInfo& service_info) {
+  void HandleBrowseCallback(BonjourBrowse::EventType event_type,
+                            const BonjourBrowse::ServiceInfo& service_info) {
     using namespace std::chrono;
 
     std::lock_guard<std::mutex> guard(device_mapping_mutex_);
 
-    if (event_type == BonjourBrowser::EventType::kServiceOnline) {
+    if (event_type == BonjourBrowse::EventType::kServiceOnline) {
       ABDebugLog("service online %s %s %s %lu", service_info.fullname.c_str(),
                  service_info.name.c_str(), service_info.ip.c_str(),
                  service_info.port);
@@ -177,7 +177,7 @@ class DriverHelper {
       return;
     }
 
-    if (event_type == BonjourBrowser::EventType::kServiceOffline) {
+    if (event_type == BonjourBrowse::EventType::kServiceOffline) {
       ABDebugLog("kServiceOffline %s", service_info.fullname.c_str());
       RemoveDevice(service_info);
       ABDebugLog("device %s removed", service_info.fullname.c_str());
@@ -185,7 +185,7 @@ class DriverHelper {
     }
   }
 
-  void AddDevice(const BonjourBrowser::ServiceInfo& service_info) {
+  void AddDevice(const BonjourBrowse::ServiceInfo& service_info) {
     aspl::DeviceParameters deviceParams;
     deviceParams.Name = service_info.name;
     deviceParams.SampleRate = SampleRate;
@@ -203,7 +203,7 @@ class DriverHelper {
     devices_mapping_[service_info.fullname] = {device, service_info};
   }
 
-  void RemoveDevice(const BonjourBrowser::ServiceInfo& service_info) {
+  void RemoveDevice(const BonjourBrowse::ServiceInfo& service_info) {
     auto it = devices_mapping_.find(service_info.fullname);
     plugin_->RemoveDevice(it->second.device_);
     devices_mapping_.erase(it);
@@ -215,7 +215,7 @@ class DriverHelper {
   std::shared_ptr<aspl::Driver> driver_;
   std::map<std::string, DeviceInfo> devices_mapping_;
   std::mutex device_mapping_mutex_;
-  BonjourBrowser browser_;
+  BonjourBrowse browse_;
 };
 
 std::shared_ptr<aspl::Driver> CreateRaopDriver() {

@@ -1,29 +1,29 @@
 // Copyright (c) 2025 ChenKS12138
 
-#include "bonjour_browser.h"
+#include "bonjour_browse.h"
 
 #include "helper/logger.h"
 
 namespace AirBeamCore {
 namespace macos {
-bool BonjourBrowser::ServiceInfo::operator==(const ServiceInfo& other) const {
+bool BonjourBrowse::ServiceInfo::operator==(const ServiceInfo& other) const {
   return name == other.name && fullname == other.fullname && ip == other.ip &&
          port == other.port;
 }
 
-BonjourBrowser::BonjourBrowser() : browseRef_(nullptr), running_(false) {}
+BonjourBrowse::BonjourBrowse() : browseRef_(nullptr), running_(false) {}
 
-BonjourBrowser::~BonjourBrowser() { stop(); }
+BonjourBrowse::~BonjourBrowse() { stop(); }
 
-bool BonjourBrowser::startBrowse(const std::string& serviceType,
-                                 ServiceFoundCallback callback) {
+bool BonjourBrowse::startBrowse(const std::string& serviceType,
+                                ServiceFoundCallback callback) {
   if (running_) return false;
   callback_ = callback;
 
   ABDebugLog("DNSServiceBrowse");
   DNSServiceErrorType err =
       DNSServiceBrowse(&browseRef_, 0, 0, serviceType.c_str(), nullptr,
-                       &BonjourBrowser::BrowseCallback, this);
+                       &BonjourBrowse::BrowseCallback, this);
 
   if (err != kDNSServiceErr_NoError) {
     ABDebugLog("DNSServiceBrowse failed: %d", err);
@@ -31,11 +31,11 @@ bool BonjourBrowser::startBrowse(const std::string& serviceType,
   }
 
   running_ = true;
-  browseThread_ = std::thread(&BonjourBrowser::browseLoop, this);
+  browseThread_ = std::thread(&BonjourBrowse::browseLoop, this);
   return true;
 }
 
-void BonjourBrowser::stop() {
+void BonjourBrowse::stop() {
   if (!running_) return;
 
   running_ = false;
@@ -50,7 +50,7 @@ void BonjourBrowser::stop() {
   }
 }
 
-void BonjourBrowser::browseLoop() {
+void BonjourBrowse::browseLoop() {
   ABDebugLog("start browse loop");
   int fd = DNSServiceRefSockFD(browseRef_);
   if (fd == -1) {
@@ -74,20 +74,20 @@ void BonjourBrowser::browseLoop() {
   }
 }
 
-void DNSSD_API BonjourBrowser::BrowseCallback(
+void DNSSD_API BonjourBrowse::BrowseCallback(
     DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex,
     DNSServiceErrorType errorCode, const char* serviceName, const char* regtype,
     const char* replyDomain, void* context) {
   ABDebugLog("browse callback %d", errorCode);
   if (errorCode != kDNSServiceErr_NoError) return;
 
-  BonjourBrowser* self = static_cast<BonjourBrowser*>(context);
+  BonjourBrowse* self = static_cast<BonjourBrowse*>(context);
 
   if (flags & kDNSServiceFlagsAdd) {
     DNSServiceRef resolveRef;
     DNSServiceErrorType err =
         DNSServiceResolve(&resolveRef, 0, interfaceIndex, serviceName, regtype,
-                          replyDomain, &BonjourBrowser::ResolveCallback, self);
+                          replyDomain, &BonjourBrowse::ResolveCallback, self);
 
     if (err == kDNSServiceErr_NoError) {
       int fd = DNSServiceRefSockFD(resolveRef);
@@ -107,7 +107,7 @@ void DNSSD_API BonjourBrowser::BrowseCallback(
       DNSServiceRefDeallocate(resolveRef);
     }
   } else {
-    BonjourBrowser* self = static_cast<BonjourBrowser*>(context);
+    BonjourBrowse* self = static_cast<BonjourBrowse*>(context);
     if (self && self->callback_) {
       ServiceInfo service_info;
       service_info.name = extractShortName(serviceName);
@@ -119,14 +119,14 @@ void DNSSD_API BonjourBrowser::BrowseCallback(
   }
 }
 
-void DNSSD_API BonjourBrowser::ResolveCallback(
+void DNSSD_API BonjourBrowse::ResolveCallback(
     DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex,
     DNSServiceErrorType errorCode, const char* fullname, const char* hosttarget,
     uint16_t port, uint16_t txtLen, const unsigned char* txtRecord,
     void* context) {
   if (errorCode != kDNSServiceErr_NoError) return;
 
-  BonjourBrowser* self = static_cast<BonjourBrowser*>(context);
+  BonjourBrowse* self = static_cast<BonjourBrowse*>(context);
   if (!self) return;
 
   port = ntohs(port);
@@ -136,7 +136,7 @@ void DNSSD_API BonjourBrowser::ResolveCallback(
   DNSServiceRef addrRef;
   DNSServiceErrorType err = DNSServiceGetAddrInfo(
       &addrRef, 0, interfaceIndex, kDNSServiceProtocol_IPv4, hosttarget,
-      &BonjourBrowser::GetAddrInfoCallback, ctx);
+      &BonjourBrowse::GetAddrInfoCallback, ctx);
 
   if (err == kDNSServiceErr_NoError) {
     int fd = DNSServiceRefSockFD(addrRef);
@@ -157,7 +157,7 @@ void DNSSD_API BonjourBrowser::ResolveCallback(
   }
 }
 
-void DNSSD_API BonjourBrowser::GetAddrInfoCallback(
+void DNSSD_API BonjourBrowse::GetAddrInfoCallback(
     DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex,
     DNSServiceErrorType errorCode, const char* hostname,
     const struct sockaddr* address, uint32_t ttl, void* context) {
@@ -165,7 +165,7 @@ void DNSSD_API BonjourBrowser::GetAddrInfoCallback(
   if (!context) return;
 
   ContextForAddr* ctx = static_cast<ContextForAddr*>(context);
-  BonjourBrowser* self = ctx->browser;
+  BonjourBrowse* self = ctx->browser;
 
   char ipStr[INET6_ADDRSTRLEN] = {0};
   if (address->sa_family == AF_INET) {
@@ -188,7 +188,7 @@ void DNSSD_API BonjourBrowser::GetAddrInfoCallback(
   delete ctx;
 }
 
-std::string BonjourBrowser::extractShortName(const std::string& fullname) {
+std::string BonjourBrowse::extractShortName(const std::string& fullname) {
   size_t pos = fullname.find("._");
   if (pos != std::string::npos) {
     return fullname.substr(0, pos);
