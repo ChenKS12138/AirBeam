@@ -24,6 +24,9 @@ jobs:
       - name: Configure with CMake
         run: cmake -S . -B build -G Ninja
 
+      - name: Run AirBeamCoreTest
+        run: cmake --build build --target AirBeamCoreTest
+
       - name: Build AirBeam target
         run: cmake --build build --target AirBeam
 
