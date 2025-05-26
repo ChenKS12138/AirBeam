@@ -2,7 +2,7 @@
 
 > A solution to address audio latency when using a HomePod as the system output device on macOS over RAOP.
 
-<img src="./images/AirBeam.png" width="200" height="200">
+<img src="./resources/AirBeam.png" width="200" height="200">
 
 [![macOS Build](https://github.com/ChenKS12138/AirBeam/actions/workflows/CI.yml/badge.svg)](https://github.com/ChenKS12138/AirBeam/actions/workflows/CI.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)

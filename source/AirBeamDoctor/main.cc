@@ -2,7 +2,6 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <latch>
 #include <thread>
 
 #include "raop/codec.h"
@@ -14,7 +13,7 @@ using namespace AirBeamCore::raop;
 int main() {
   std::cout << "Begin App" << std::endl;
 
-  Raop raop("192.168.123.109");
+  Raop raop("192.168.123.109", 7000);
   raop.Start();
   raop.SetVolume(30);
 

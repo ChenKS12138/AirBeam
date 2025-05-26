@@ -25,8 +25,8 @@ struct RaopStatus {
 
 class Raop {
  public:
-  Raop(const std::string rtsp_ip_addr)
-      : rtsp_ip_addr_(rtsp_ip_addr), rtsp_port_(7000) {}
+  Raop(const std::string rtsp_ip_addr, uint32_t rtsp_port)
+      : rtsp_ip_addr_(rtsp_ip_addr), rtsp_port_(rtsp_port) {}
 
  private:
   raop::RTSPClient rtsp_client_;

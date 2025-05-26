@@ -40,8 +40,9 @@ const size_t kFiFOCapacity = 30 * 1024 * 1024;  // 30MB buffer
 class RaopHandler : public aspl::ControlRequestHandler,
                     public aspl::IORequestHandler {
  public:
-  explicit RaopHandler(aspl::Device& device, const std::string& ip)
-      : raop_(std::make_shared<Raop>(ip)),
+  explicit RaopHandler(aspl::Device& device, const std::string& ip,
+                       uint32_t port)
+      : raop_(std::make_shared<Raop>(ip, port)),
         fifo_(kFiFOCapacity),
         device_(device) {
     auto volume_control =
@@ -192,7 +193,8 @@ class DriverHelper {
 
     auto device = std::make_shared<aspl::Device>(context_, deviceParams);
     device->AddStreamWithControlsAsync(aspl::Direction::Output);
-    auto raop_handler = std::make_shared<RaopHandler>(*device, service_info.ip);
+    auto raop_handler = std::make_shared<RaopHandler>(*device, service_info.ip,
+                                                      service_info.port);
 
     device->SetControlHandler(raop_handler);
     device->SetIOHandler(raop_handler);
