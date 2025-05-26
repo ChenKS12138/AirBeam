@@ -20,17 +20,18 @@
 #include "aspl/Device.hpp"
 #include "aspl/IORequestHandler.hpp"
 #include "aspl/Plugin.hpp"
-#include "bonjour_browser.hpp"
 #include "helper/logger.h"
+#include "macos/bonjour_browser.h"
+#include "macos/volume_observer.h"
 #include "raop/codec.h"
 #include "raop/fifo.h"
 #include "raop/raop.h"
-#include "volume_observer.hpp"
 
 namespace {
 
 using namespace AirBeamCore::raop;
 using namespace AirBeamCore::helper;
+using namespace AirBeamCore::macos;
 
 constexpr UInt32 SampleRate = 44100;
 constexpr UInt32 ChannelCount = 2;

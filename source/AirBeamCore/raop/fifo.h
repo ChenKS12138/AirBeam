@@ -13,9 +13,12 @@ class ConcurrentByteFIFO {
   explicit ConcurrentByteFIFO(size_t capacity)
       : buffer_(capacity), capacity_(capacity), head_(0), tail_(0), size_(0) {}
 
-  size_t Write(const uint8_t* data, size_t length);
+  size_t Write(
+      const uint8_t* data, size_t length,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
 
-  size_t Read(uint8_t* data, size_t length);
+  size_t Read(uint8_t* data, size_t length,
+              std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
 
   bool Empty() const {
     std::lock_guard<std::mutex> lock(mutex_);

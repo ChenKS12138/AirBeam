@@ -4,11 +4,25 @@
 
 namespace AirBeamCore {
 namespace raop {
-size_t ConcurrentByteFIFO::Write(const uint8_t* data, size_t length) {
+size_t ConcurrentByteFIFO::Write(const uint8_t* data, size_t length,
+                                 std::chrono::milliseconds timeout) {
   size_t written = 0;
   while (written < length) {
     std::unique_lock<std::mutex> lock(mutex_);
-    not_full_cv_.wait(lock, [this]() { return size_ < capacity_; });
+    bool timeout_occurred = false;
+    if (size_ == capacity_) {
+      if (timeout == std::chrono::milliseconds(0)) {
+        not_full_cv_.wait(lock, [this]() { return size_ < capacity_; });
+      } else {
+        timeout_occurred = !not_full_cv_.wait_for(
+            lock, timeout, [this]() { return size_ < capacity_; });
+      }
+    }
+
+    if (timeout_occurred) {
+      break;
+    }
+
     buffer_[head_] = data[written++];
     head_ = (head_ + 1) % capacity_;
     ++size_;
@@ -18,11 +32,25 @@ size_t ConcurrentByteFIFO::Write(const uint8_t* data, size_t length) {
   return written;
 }
 
-size_t ConcurrentByteFIFO::Read(uint8_t* data, size_t length) {
+size_t ConcurrentByteFIFO::Read(uint8_t* data, size_t length,
+                                std::chrono::milliseconds timeout) {
   size_t read_count = 0;
   while (read_count < length) {
     std::unique_lock<std::mutex> lock(mutex_);
-    not_empty_cv_.wait(lock, [this]() { return size_ > 0; });
+    bool timeout_occurred = false;
+    if (size_ == 0) {
+      if (timeout == std::chrono::milliseconds(0)) {
+        not_empty_cv_.wait(lock, [this]() { return size_ > 0; });
+      } else {
+        timeout_occurred = !not_empty_cv_.wait_for(
+            lock, timeout, [this]() { return size_ > 0; });
+      }
+    }
+
+    if (timeout_occurred) {
+      break;
+    }
+
     data[read_count++] = buffer_[tail_];
     tail_ = (tail_ + 1) % capacity_;
     --size_;

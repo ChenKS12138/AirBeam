@@ -93,3 +93,34 @@ TEST(ConcurrentByteFIFOTest, ConcurrentReadWrite) {
 
   EXPECT_EQ(write_data, read_data);
 }
+
+TEST(ConcurrentByteFIFOTest, WriteTimeoutWhenFull) {
+  ConcurrentByteFIFO fifo(2);
+  std::vector<uint8_t> input = {1, 2};
+  EXPECT_EQ(fifo.Write(input.data(), input.size()), 2);
+  EXPECT_TRUE(fifo.Full());
+
+  std::vector<uint8_t> more = {3, 4};
+  // 由于已满，且timeout很短，应该直接超时返回0
+  auto start = std::chrono::steady_clock::now();
+  size_t written =
+      fifo.Write(more.data(), more.size(), std::chrono::milliseconds(30));
+  auto end = std::chrono::steady_clock::now();
+  EXPECT_EQ(written, 0);
+  EXPECT_GE(std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count(),
+            25);
+}
+
+TEST(ConcurrentByteFIFOTest, ReadTimeoutWhenEmpty) {
+  ConcurrentByteFIFO fifo(2);
+  uint8_t buf[2];
+  // 由于为空，且timeout很短，应该直接超时返回0
+  auto start = std::chrono::steady_clock::now();
+  size_t read = fifo.Read(buf, 2, std::chrono::milliseconds(30));
+  auto end = std::chrono::steady_clock::now();
+  EXPECT_EQ(read, 0);
+  EXPECT_GE(std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count(),
+            25);
+}
