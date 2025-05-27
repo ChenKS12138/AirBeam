@@ -1,3 +1,5 @@
+#include <sys/fcntl.h>
+
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -26,22 +28,55 @@ ABSL_FLAG(std::string, log, "", "Log to this file. ");
 using namespace AirBeamCore::raop;
 using namespace AirBeamCore::macos;
 
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include "absl/log/log_sink.h"
+
 class FileLogSink : public absl::LogSink {
  public:
-  explicit FileLogSink(const std::string& filename)
-      : file_(filename, std::ios::app) {
+  explicit FileLogSink(const std::string& filename) {
     absl::AddLogSink(this);
-  }
-  ~FileLogSink() override { absl::RemoveLogSink(this); }
-  void Send(const absl::LogEntry& entry) override {
-    for (absl::string_view line :
-         absl::StrSplit(entry.text_message_with_prefix(), '\n')) {
-      file_ << line << std::endl;
+
+    // Open the log file
+    fd_ = open(filename.c_str(), O_WRONLY | O_TRUNC | O_CREAT | O_APPEND,
+               0744);  // open or create file for writing
+    if (fd_ == -1) {
+      std::cerr << "Failed to open log file: " << filename << std::endl;
+    }
+
+    if (fd_ != -1) {
+      dup2(fd_, STDERR_FILENO);
+    } else {
+      std::cout << "Failed to open log file for stderr redirection."
+                << std::endl;
     }
   }
 
+  ~FileLogSink() override {
+    absl::RemoveLogSink(this);
+    if (fd_ != -1) {
+      close(fd_);
+      fd_ = -1;
+    }
+  }
+
+  void Send(const absl::LogEntry& entry) override {
+    std::string_view message = entry.text_message_with_prefix();
+    std::cout << message;
+    std::cout.flush();
+
+    if (fd_ == -1) return;
+    write(fd_, message.data(), message.size());
+    fsync(fd_);
+  }
+
  private:
-  std::ofstream file_;
+  int fd_ = -1;
 };
 
 void TryBonjourBrowse(std::vector<BonjourBrowse::ServiceInfo>& found_services) {
@@ -49,12 +84,12 @@ void TryBonjourBrowse(std::vector<BonjourBrowse::ServiceInfo>& found_services) {
   auto callback = [&](BonjourBrowse::EventType event_type,
                       const BonjourBrowse::ServiceInfo& service_info) {
     if (event_type == BonjourBrowse::EventType::kServiceOnline) {
-      std::cout << "[Bonjour] Found: " << service_info.name
+      LOG(INFO) << "[Bonjour] Found: " << service_info.name
                 << ", IP: " << service_info.ip
                 << ", Port: " << service_info.port << std::endl;
       found_services.push_back(service_info);
     } else if (event_type == BonjourBrowse::EventType::kServiceOffline) {
-      std::cout << "[Bonjour] Offline: " << service_info.name << std::endl;
+      LOG(INFO) << "[Bonjour] Offline: " << service_info.name << std::endl;
     }
   };
   bool started = browser.startBrowse("_raop._tcp", callback);
@@ -70,22 +105,22 @@ void TryChooseService(const std::vector<BonjourBrowse::ServiceInfo>& services,
                       BonjourBrowse::ServiceInfo& chosen) {
   CHECK(services.size() > 0) << "No service found.";
 
-  std::cout << "Available services:" << std::endl;
+  LOG(INFO) << "Available services:" << std::endl;
   for (size_t i = 0; i < services.size(); ++i) {
-    std::cout << "[" << i << "] " << services[i].name
+    LOG(INFO) << "[" << i << "] " << services[i].name
               << ", IP: " << services[i].ip << ", Port: " << services[i].port
               << std::endl;
   }
 
   size_t choice;
   while (true) {
-    std::cout << "Choose a service (enter the number): ";
+    LOG(INFO) << "Choose a service (enter the number): ";
     std::cin >> choice;
 
     if (std::cin.fail()) {
       std::cin.clear();
       std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      std::cout << "Invalid input. Please enter a number." << std::endl;
+      LOG(INFO) << "Invalid input. Please enter a number." << std::endl;
       continue;
     }
 
@@ -93,10 +128,14 @@ void TryChooseService(const std::vector<BonjourBrowse::ServiceInfo>& services,
       chosen = services[choice];
       break;
     } else {
-      std::cout << "Invalid choice. Please enter a number between 0 and "
+      LOG(INFO) << "Invalid choice. Please enter a number between 0 and "
                 << services.size() - 1 << "." << std::endl;
     }
   }
+
+  LOG(INFO) << "choice=" << choice << ", chosen=" << chosen.name;
+  LOG(INFO) << "Service chosen: " << chosen.name << ", IP: " << chosen.ip
+            << ", Port: " << chosen.port << std::endl;
 }
 
 void TryRaop(const BonjourBrowse::ServiceInfo& service,
@@ -150,11 +189,15 @@ int main(int argc, char* argv[]) {
   absl::SetProgramUsageMessage("AirBeamDoctor");
   absl::ParseCommandLine(argc, argv);
 
+  // audio_pcm file should be raw, 16bit, signed-integer, stereo, 44100 sample
+  // rate, e.g.:
+  // brew install sox
+  // play -t raw -b 16 -e signed-integer -c 2 -r 44100 ./resources/audio.pcm
   std::string audio_pcm_path = absl::GetFlag(FLAGS_audio_pcm);
   std::string log_path = absl::GetFlag(FLAGS_log);
 
   if (audio_pcm_path.empty() || log_path.empty()) {
-    std::cerr << "Both --audio_pcm and --log must be specified." << std::endl;
+    LOG(INFO) << "Both --audio_pcm and --log must be specified." << std::endl;
     return 1;
   }
 

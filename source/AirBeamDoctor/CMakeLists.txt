@@ -28,5 +28,5 @@ target_link_libraries(
   absl::log_initialize
   absl::strings
 
-  AirBeamCore
+  AirBeamCore_DEBUG
 )

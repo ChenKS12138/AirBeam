@@ -1,9 +1,15 @@
 SET(AIRBEAM_CORE_TARGET AirBeamCore)
+SET(AIRBEAM_CORE_TARGET_DEBUG ${AIRBEAM_CORE_TARGET}_DEBUG)
 
 option(BUILD_DEBUG "Enable debug build" OFF)
 if(BUILD_DEBUG)
   add_definitions(-DBUILD_DEBUG)
 endif()
+
+
+set(ABSL_PROPAGATE_CXX_STD ON)
+CPMAddPackage("gh:abseil/abseil-cpp#20250512.0")
+CPMAddPackage("gh:fmtlib/fmt#7.1.3")
 
 file(
   GLOB_RECURSE
@@ -11,24 +17,33 @@ file(
   ${CMAKE_CURRENT_SOURCE_DIR}/*
 )
 
-add_library(
-  ${AIRBEAM_CORE_TARGET}
-  ${AIRBEAM_CORE_FILES}
-)
+# Create a macro to handle common target configurations
+macro(configure_airbeam_target target_name)
+  add_library(
+    ${target_name}
+    ${AIRBEAM_CORE_FILES}
+  )
 
-target_include_directories(
-  ${AIRBEAM_CORE_TARGET} PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}
-)
+  target_include_directories(
+    ${target_name}
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 
-set(ABSL_PROPAGATE_CXX_STD ON)
-CPMAddPackage("gh:abseil/abseil-cpp#20250512.0")
-CPMAddPackage("gh:fmtlib/fmt#7.1.3")
+  target_link_libraries(
+    ${target_name}
+    fmt::fmt
+    absl::strings
+    absl::base
+  )
+endmacro()
 
-target_link_libraries(
-  ${AIRBEAM_CORE_TARGET}
+# Configure both targets using the macro
+configure_airbeam_target(${AIRBEAM_CORE_TARGET})
+configure_airbeam_target(${AIRBEAM_CORE_TARGET_DEBUG})
 
-  fmt::fmt
-  absl::strings
-  absl::base
+target_compile_definitions(
+  ${AIRBEAM_CORE_TARGET_DEBUG}
+  PUBLIC
+  -DBUILD_DEBUG
 )
