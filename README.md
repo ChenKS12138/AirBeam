@@ -54,6 +54,19 @@ cmake --build build --target AirBeam
 open build/source/AirBeam/AirBeam.app
 ```
 
+## 🪛 Troubleshooting
+
+```shell
+git clone git@github.com:ChenKS12138/AirBeam.git
+cd AirBeam
+bash ./run_airbeam_doctor.sh
+
+# This script will search for RAOP services on the network, you need to enter the number to select one, the script will transmit audio to the RAOP service, and print debug logs to the `mylog.log` file.
+# For feedback, please provide the `mylog.log` file.
+```
+
+<img width="932" alt="image" src="https://github.com/user-attachments/assets/73ae18b9-c6f1-4437-95fb-0584353d2120" />
+
 
 ## 🙏 Credits
 
