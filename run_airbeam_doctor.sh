@@ -4,10 +4,6 @@ set -xe
 ROOT_DIR=$(dirname "$0")
 
 rm -rf ./build
-
-# should not remove, or CPM not work. I don't know why.
-sleep 1
-
 cmake -S . -B build -GNinja
 cmake --build build --target AirBeamDoctor
 
