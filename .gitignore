@@ -3,3 +3,4 @@
 /compile_commands.json
 /*.sh
 /*.log
+!run_airbeam_doctor.sh
