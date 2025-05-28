@@ -31,7 +31,7 @@
 
 There are several ways:
 
-* ⬇️ Download [the latest release on Github](https://github.com/ChenKS12138/AirBeam/releases)
+* ~~⬇️ Download [the latest release on Github](https://github.com/ChenKS12138/AirBeam/releases)~~ There're some issue with pre-built release, I will fix it.
 * 🚀 Clone it and build it yourself
 
 ## ⚙️ Usage
